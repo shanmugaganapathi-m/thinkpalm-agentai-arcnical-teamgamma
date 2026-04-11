@@ -212,14 +212,21 @@ source .venv/bin/activate
 # Run all tests
 pytest tests/ -v
 
-# Run schema tests only
+# Run unit tests only
+pytest tests/unit/ -v
+
+# Run a specific test file
 pytest tests/unit/test_schema.py -v
 
 # Run with coverage report
 pytest tests/ -v --cov=arcnical --cov-report=term-missing
 ```
 
-> **Note:** If `pytest` is not on your PATH, use `.venv/Scripts/pytest` (Windows) or `.venv/bin/pytest` (macOS/Linux), or activate the venv first.
+> **If `pytest` is not recognised**, use `python -m pytest` instead:
+> ```bash
+> python -m pytest tests/unit/ -v
+> ```
+> Alternatively, activate the venv first (`.venv\Scripts\Activate.ps1` on Windows, `source .venv/bin/activate` on macOS/Linux) and then `pytest` will work directly.
 
 ### Lint & Type Check
 
