@@ -4,7 +4,10 @@
       "Bash(pip install:*)",
       "Bash(python -m pytest tests/unit/test_schema.py -v)",
       "Bash(python -m uv sync --all-extras)",
-      "Bash(.venv/Scripts/pytest tests/unit/test_schema.py -v)"
+      "Bash(.venv/Scripts/pytest tests/unit/test_schema.py -v)",
+      "Bash(.venv/Scripts/pytest tests/unit/test_parser.py -v)",
+      "Bash(.venv/Scripts/pytest tests/unit/ -v)",
+      "Bash(.venv/Scripts/python -c ':*)"
     ]
   }
 }
