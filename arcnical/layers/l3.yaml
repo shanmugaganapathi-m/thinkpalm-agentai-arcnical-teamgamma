@@ -1,0 +1,35 @@
+# L3: Code Health Layer Configuration
+# Runs third; complexity thresholds, hotspots, dead code
+
+id: L3
+name: Code Health
+description: Evaluates code quality metrics like complexity, coupling, and churn
+version: "1"
+
+checks:
+  - name: complexity_thresholds
+    description: "Flags functions with cyclomatic >15, files with LOC >600 (FR-HEU-04)"
+    
+  - name: fan_in_fan_out
+    description: "Computes coupling metrics per module"
+    
+  - name: instability_analysis
+    description: "Identifies unstable modules (I = Ce / (Ca + Ce))"
+    
+  - name: dead_code_candidates
+    description: "Lists functions with zero inbound calls (FR-HEU-06, P2)"
+    
+  - name: hotspots
+    description: "Ranks hotspots by complexity × churn (FR-HEU-07, P2)"
+
+thresholds:
+  cyclomatic_complexity_max: 15
+  file_loc_max: 600
+  instability_max: 0.8  # Unstable if >0.8
+
+blocking_conditions: []  # L3 issues are informational, not blocking
+
+enabled: true
+required: true  # L3 always runs after L2
+
+next_layer: L4

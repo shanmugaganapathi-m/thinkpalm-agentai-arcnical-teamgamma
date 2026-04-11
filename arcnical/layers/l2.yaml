@@ -1,0 +1,38 @@
+# L2: Architectural Rules Layer Configuration
+# Runs second; checks for cycles, god classes, layer violations
+
+id: L2
+name: Architectural Rules
+description: Identifies architectural issues like circular dependencies and layer violations
+version: "1"
+
+checks:
+  - name: circular_imports
+    description: "Detects circular import cycles (FR-HEU-02)"
+    
+  - name: god_classes
+    description: "Flags classes >300 LOC or >20 methods (FR-HEU-03)"
+    
+  - name: layer_violations
+    description: "Detects when lower layer imports from higher layer (FR-HEU-05)"
+    
+  - name: module_boundaries
+    description: "Verifies module boundary integrity"
+    
+  - name: architecture_style
+    description: "Detects architecture style patterns (FR-ARCH-01)"
+    
+  - name: api_surface
+    description: "Identifies API surface types (FR-ARCH-02)"
+
+blocking_conditions:
+  - "circular_imports in critical_modules"  # Circular deps touching core (FR-LAY-05)
+  - "layer_violations > threshold"  # Severe violations like domain←controllers (FR-LAY-05)
+
+enabled: true
+required: true  # L2 always runs after L1
+
+parallel_stages:
+  - security  # Run security in parallel (FR-LAY-01)
+
+next_layer: L3

@@ -1,0 +1,30 @@
+# L1: Structural Integrity Layer Configuration
+# Runs first; checks parse success, manifest presence, qualification confirmation
+
+id: L1
+name: Structural Integrity
+description: Verifies the codebase can be parsed and basic structure is sound
+version: "1"
+
+checks:
+  - name: parse_success_rate
+    description: "Percentage of source files successfully parsed"
+    threshold: 0.70  # Fail if >30% parse failures (FR-LAY-05)
+    
+  - name: manifest_presence
+    description: "Package manifest detection (pyproject.toml, package.json, etc)"
+    
+  - name: import_resolution
+    description: "Ability to resolve internal imports"
+    
+  - name: qualification_confirmed
+    description: "Reconfirm target is application after ingestion"
+
+blocking_conditions:
+  - "parse_success_rate < 0.70"  # >30% failures = blocking (FR-LAY-05)
+  - "qualification_confirmed == false"  # Non-application target (FR-QUAL-02)
+
+enabled: true
+required: true  # L1 always runs
+
+next_layer: L2

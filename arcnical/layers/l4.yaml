@@ -1,0 +1,38 @@
+# L4: Semantic Review Layer Configuration
+# Runs fourth (only after L1-L3 pass or --force used); LLM-powered review
+
+id: L4
+name: Semantic Review
+description: LLM agent performs focused review with retrieval over knowledge graph
+version: "1"
+
+checks:
+  - name: architecture_review
+    description: "LLM review of architecture patterns and decisions"
+    requires_llm: true
+    
+  - name: maintainability_review
+    description: "LLM review of code maintainability (FR-REV-08)"
+    requires_llm: true
+    
+  - name: performance_review
+    description: "LLM review of performance implications (FR-REV-08)"
+    requires_llm: true
+
+llm_config:
+  model: "claude-sonnet-4-6"  # Claude Sonnet 4.6 for v0.2.0
+  temperature: 0  # Deterministic (FR-REV-06)
+  max_tool_loops: 15  # Max iterations (3.3 Cost Control)
+  tools:
+    - get_file  # Load specific file from repo
+    - get_function  # Load specific function by name
+    - search_symbol  # Search symbol across codebase
+
+blocking_conditions: []  # L4 issues never block (informational)
+
+enabled: true
+required_after: L3  # Only runs after L1-L3 complete
+
+verification:
+  enabled: true  # Verify citations against knowledge graph (FR-REV-05)
+  drop_unverified: true  # Remove hallucinated citations

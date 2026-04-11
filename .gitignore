@@ -1,0 +1,67 @@
+# Runtime
+.arcnical/
+.arcnical/reports/
+.arcnical/cache/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+ENV/
+env/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment
+.env
+.env.local
+.env*.local
+*.pem
+*.key
+
+# Linting
+.ruff_cache/
+.mypy_cache/
+
+# Dependencies
+uv.lock
+pip-log.txt
+pip-delete-this-directory.txt
+
+# OS
+.DS_Store
+Thumbs.db
