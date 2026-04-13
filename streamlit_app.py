@@ -1,7 +1,8 @@
 """
-Arcnical Streamlit Dashboard - Phase 4
+Arcnical Streamlit Dashboard - Phase 4+ with Repository Input
 
 Complete application with:
+- Repository path input field in sidebar
 - PyVis graph visualization (Phase 3)
 - CLI bridge with sidebar controls (Phase 4)
 - Live status updates
@@ -9,6 +10,7 @@ Complete application with:
 """
 
 import json
+import os
 import streamlit as st
 from pathlib import Path
 from datetime import datetime
@@ -16,6 +18,12 @@ from typing import Dict, Any, Optional
 import networkx as nx
 import tempfile
 import time
+import subprocess
+from dotenv import load_dotenv
+from arcnical.cli_bridge import CLIBridge
+
+# Load environment variables from .env
+load_dotenv()
 
 # ============================================================
 # PAGE CONFIGURATION
@@ -25,7 +33,7 @@ st.set_page_config(
     page_title="Arcnical - Architecture Analyzer",
     page_icon="📊",
     layout="wide",
-    initial_sidebar_state="expanded",  # Show sidebar by default in Phase 4
+    initial_sidebar_state="expanded",
 )
 
 # ============================================================
@@ -100,6 +108,9 @@ def initialize_session_state():
     if "depth" not in st.session_state:
         st.session_state.depth = "standard"
     
+    if "repo_path" not in st.session_state:
+        st.session_state.repo_path = "./test_repo"
+    
     if "status" not in st.session_state:
         st.session_state.status = "Ready"
     
@@ -114,6 +125,15 @@ def initialize_session_state():
     
     if "analysis_data" not in st.session_state:
         st.session_state.analysis_data = None
+
+    if "analyze_triggered" not in st.session_state:
+        st.session_state.analyze_triggered = False
+
+    if "cli_output" not in st.session_state:
+        st.session_state.cli_output = ""
+
+    if "analyze_error" not in st.session_state:
+        st.session_state.analyze_error = None
 
 # ============================================================
 # DATA LOADING
@@ -177,22 +197,23 @@ def build_dependency_graph(analysis_data: Dict[str, Any]) -> nx.DiGraph:
     findings = analysis_data.get("findings", [])
     file_structure = analysis_data.get("file_structure", {})
     
-    # Create nodes
+    # Create nodes — files may be a dict {filename: loc} or a language-ratio string
     files = file_structure.get("files", {})
-    
-    for filename, loc in files.items():
-        if isinstance(loc, (int, float)):
-            color = get_node_color(loc)
-            size = get_node_size(loc)
-            
-            graph.add_node(
-                filename,
-                title=filename,
-                label=filename,
-                size=size,
-                color=color,
-                loc=loc,
-            )
+
+    if isinstance(files, dict):
+        for filename, loc in files.items():
+            if isinstance(loc, (int, float)):
+                color = get_node_color(loc)
+                size = get_node_size(loc)
+
+                graph.add_node(
+                    filename,
+                    title=filename,
+                    label=filename,
+                    size=size,
+                    color=color,
+                    loc=loc,
+                )
     
     # Create edges
     for finding in findings:
@@ -302,18 +323,54 @@ def render_pyvis_graph(graph: nx.DiGraph) -> str:
     net.toggle_physics(True)
     
     temp_file = Path(tempfile.gettempdir()) / "arcnical_graph.html"
-    net.show(str(temp_file))
-    
+    net.write_html(str(temp_file))
+
     return str(temp_file)
 
 # ============================================================
-# SIDEBAR - PHASE 4
+# SIDEBAR - PHASE 4+ with Repository Input
 # ============================================================
 
 def render_sidebar() -> tuple:
-    """Render enhanced sidebar with Phase 4 controls."""
+    """Render enhanced sidebar with Phase 4+ controls."""
     with st.sidebar:
         st.markdown("## ⚙️ Analysis Controls")
+        st.divider()
+        
+        # Repository Path Input
+        st.markdown("### 📁 Repository")
+        repo_path_input = st.text_input(
+            "Enter repository path or GitHub URL",
+            value=st.session_state.repo_path,
+            placeholder="./test_repo or https://github.com/owner/repo",
+            help="Local path (./test_repo) or GitHub URL (https://github.com/owner/repo)",
+            key="repo_path_input",
+        )
+
+        if repo_path_input:
+            st.session_state.repo_path = repo_path_input
+
+        # Validate path display
+        if st.session_state.repo_path.startswith("https://"):
+            st.caption(f"🌐 GitHub URL: {st.session_state.repo_path}")
+        elif st.session_state.repo_path.startswith("./") or st.session_state.repo_path.startswith("/"):
+            st.caption(f"✅ Local path: {st.session_state.repo_path}")
+        else:
+            st.caption(f"📍 Path: {st.session_state.repo_path}")
+
+        # Analyze submit button
+        analyze_clicked = st.button(
+            "🔍 Analyze Repository",
+            use_container_width=True,
+            type="primary",
+            key="analyze_button",
+            help="Run architecture analysis on the repository above",
+        )
+
+        if analyze_clicked:
+            st.session_state.analyze_triggered = True
+            st.session_state.analyze_error = None
+
         st.divider()
         
         # Provider Selector
@@ -365,16 +422,20 @@ def render_sidebar() -> tuple:
         
         st.divider()
         
-        # Re-run Button
-        st.markdown("### 🔄 Execute Analysis")
-        
+        # Re-run last analysis
+        st.markdown("### 🔄 Quick Re-run")
+
         re_run_clicked = st.button(
-            "🔄 Re-run Analysis",
+            "🔄 Re-run Last Analysis",
             use_container_width=True,
-            type="primary",
+            type="secondary",
             key="re_run_button",
-            help="Re-analyze repository with current settings"
+            help="Re-run analysis with the same settings"
         )
+
+        if re_run_clicked:
+            st.session_state.analyze_triggered = True
+            st.session_state.analyze_error = None
         
         st.divider()
         
@@ -410,13 +471,14 @@ def render_sidebar() -> tuple:
         # Settings Summary
         st.markdown("### ⚙️ Current Settings")
         settings_text = f"""
+- **Repository:** {st.session_state.repo_path}
 - **Provider:** {st.session_state.provider.capitalize()}
 - **Depth:** {st.session_state.depth.capitalize()}
 - **Status:** {st.session_state.status}
         """
         st.markdown(settings_text)
         
-        return st.session_state.provider, st.session_state.depth, re_run_clicked
+        return st.session_state.provider, st.session_state.depth, st.session_state.repo_path, st.session_state.analyze_triggered
 
 # ============================================================
 # MAIN APPLICATION
@@ -428,18 +490,66 @@ def main():
     initialize_session_state()
     
     # Render sidebar and get controls
-    provider, depth, re_run_clicked = render_sidebar()
-    
+    provider, depth, repo_path, analyze_triggered = render_sidebar()
+
+    # ============================================================
+    # ANALYSIS EXECUTION
+    # ============================================================
+
+    if analyze_triggered:
+        st.session_state.analyze_triggered = False  # Reset trigger
+
+        # Resolve API key based on selected provider
+        api_key_map = {
+            "claude": os.getenv("ANTHROPIC_API_KEY"),
+            "openai": os.getenv("OPENAI_API_KEY"),
+            "gemini": os.getenv("GEMINI_API_KEY"),
+        }
+        api_key = api_key_map.get(provider)
+
+        if depth == "standard" and (not api_key or api_key == "env_file_api_placeholder"):
+            st.warning(
+                f"⚠️ No API key found for **{provider.capitalize()}**. "
+                "Open `.env` and replace `env_file_api_placeholder` with your key, "
+                "or switch to **Quick** depth (no LLM required)."
+            )
+        else:
+            st.session_state.status = "Running"
+            with st.spinner(f"Running analysis on `{repo_path}` ..."):
+                success, message, exec_time, data = CLIBridge.execute_analysis(
+                    repo_path=repo_path,
+                    depth=depth,
+                    provider=provider,
+                    api_key=api_key if depth == "standard" else None,
+                )
+
+            if success:
+                st.session_state.status = "Complete"
+                st.session_state.execution_time = exec_time
+                st.session_state.last_run_time = datetime.now().strftime("%H:%M:%S")
+                st.session_state.analysis_data = data
+                st.session_state.findings_count = len(data.get("findings", []))
+                st.session_state.cli_output = CLIBridge.get_cli_output_display(
+                    repo_path, depth, provider, exec_time, st.session_state.findings_count
+                )
+                st.success(message)
+                load_analysis_data.clear()  # Bust cache so fresh data loads
+                st.rerun()
+            else:
+                st.session_state.status = "Error"
+                st.session_state.analyze_error = message
+                st.error(message)
+
     # Load analysis data
     analysis_data = load_analysis_data()
     
     if not analysis_data:
-        st.error("❌ No analysis data found. Run `python -m arcnical analyze` first.")
+        st.error("❌ No analysis data found. Run analysis first.")
         st.info(
-            "To generate analysis data:\n"
-            "```bash\n"
-            "python -m arcnical analyze ./your-repo --depth quick\n"
-            "```"
+            f"To generate analysis data, use the Re-run button in the sidebar or run:\n"
+            f"```bash\n"
+            f"python -m arcnical analyze {repo_path} --depth {depth}\n"
+            f"```"
         )
         return
     
@@ -535,7 +645,9 @@ def main():
         try:
             graph = build_dependency_graph(analysis_data)
             
-            if graph.nodes():
+            if not graph.nodes():
+                st.info("No file-level dependency data available. Graph requires per-file LOC data in `file_structure.files`.")
+            elif graph.nodes():
                 st.subheader("Graph Statistics")
                 
                 col1, col2, col3, col4 = st.columns(4)
@@ -603,7 +715,11 @@ def main():
         if analysis_data.get("file_structure"):
             file_struct = analysis_data["file_structure"]
             st.write(f"**Total Files:** {file_struct.get('total_files', 0)}")
-            st.json(file_struct.get("files", {}), expanded=False)
+            files_val = file_struct.get("files", {})
+            if isinstance(files_val, dict):
+                st.json(files_val, expanded=False)
+            else:
+                st.write(f"**Language Breakdown:** {files_val}")
     
     with tab5:
         st.subheader("Findings")
@@ -637,7 +753,7 @@ def main():
                 st.info("PDF export coming in Phase 5")
     
     # ============================================================
-    # BOTTOM SECTION - PHASE 4
+    # BOTTOM SECTION - PHASE 4+
     # ============================================================
     
     st.divider()
@@ -647,18 +763,15 @@ def main():
     with col1:
         st.markdown("### CLI Command Display")
         st.markdown(f"**Status:** ✅ {st.session_state.status}")
-        
-        cli_command = f"""D:\\Projects\\arcnical_repo> python -m arcnical analyze ./test_repo
---depth {st.session_state.depth}
---llm-provider {st.session_state.provider}
-"""
-        
-        if st.session_state.execution_time:
-            cli_command += f"\n✅ Completed in {st.session_state.execution_time:.2f}s"
-        
-        cli_command += f"\n📋 Findings: {st.session_state.findings_count}"
-        cli_command += "\n✅ Analysis complete"
-        
+
+        cli_command = st.session_state.cli_output or CLIBridge.get_cli_output_display(
+            repo_path,
+            st.session_state.depth,
+            st.session_state.provider,
+            st.session_state.execution_time,
+            st.session_state.findings_count,
+        )
+
         st.code(cli_command, language="bash")
     
     with col2:
@@ -669,6 +782,7 @@ def main():
 **Model:** claude-sonnet-4-6
 **Provider:** {st.session_state.provider.capitalize()}
 **Depth:** {st.session_state.depth.capitalize()}
+**Repository:** {repo_path}
 **Last Run:** {st.session_state.last_run_time or 'Never'}"""
         
         if st.session_state.execution_time:

@@ -2,6 +2,7 @@
 .arcnical/
 .arcnical/reports/
 .arcnical/cache/
+.arcnical/clones/
 
 # Python
 __pycache__/

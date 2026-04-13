@@ -25,7 +25,10 @@
       "Bash(find:*)",
       "Bash(python:*)",
       "Bash(PYTHONUTF8=1 python -m pytest tests/ -v --cov=arcnical)",
-      "Bash(PYTHONUTF8=1 python -m pytest tests/unit/test_metrics.py::TestComplexityCalculator::test_calculate_file_complexity -v)"
+      "Bash(PYTHONUTF8=1 python -m pytest tests/unit/test_metrics.py::TestComplexityCalculator::test_calculate_file_complexity -v)",
+      "Bash(PYTHONIOENCODING=utf-8 python -m arcnical analyze ./test_repo --depth standard --llm-provider claude)",
+      "Bash(git:*)",
+      "Bash(PYTHONIOENCODING=utf-8 python -m arcnical analyze .arcnical/clones/vinta_awesome-python --depth quick)"
     ]
   }
 }

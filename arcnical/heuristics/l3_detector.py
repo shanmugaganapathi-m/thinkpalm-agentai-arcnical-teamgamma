@@ -12,7 +12,7 @@ from typing import List, Dict, Optional
 from dataclasses import dataclass
 import os
 
-from arcnical.schema import Recommendation, Severity, RecommendationCategory
+from arcnical.schema import Evidence, FileReference, Recommendation, Severity, RecommendationCategory
 from arcnical.graph.builder import CodeKnowledgeGraph
 from arcnical.metrics.calculator import ComplexityCalculator, CouplingCalculator, LOCCalculator
 from arcnical.parse.parser import SymbolType
@@ -36,9 +36,48 @@ class L3Finding:
             severity=self.severity,
             category=self.category,
             layer=self.layer,
-            evidence=str(self.evidence),
+            evidence=self._build_evidence(),
             rationale=f"Code quality issue detected at layer {self.layer}",
             suggested_action=self._get_suggested_action(),
+        )
+
+    def _build_evidence(self) -> Evidence:
+        """Map the finding's evidence dict to the Evidence schema."""
+        ev = self.evidence
+
+        # Determine metric name and value from whichever keys are present
+        if "max_complexity" in ev:
+            metric = "complexity"
+            value = float(ev["max_complexity"])
+            file_ref = ev.get("file", "")
+        elif "loc" in ev:
+            metric = "loc"
+            value = float(ev["loc"])
+            file_ref = ev.get("file", "")
+        elif "instability" in ev:
+            metric = "instability"
+            value = float(ev["instability"])
+            file_ref = ev.get("module", "")
+        elif "fan_out" in ev:
+            metric = "fan_out"
+            value = float(ev["fan_out"])
+            file_ref = ev.get("module", "")
+        else:
+            # Fallback: use first numeric value found
+            metric = "unknown"
+            value = next(
+                (float(v) for v in ev.values() if isinstance(v, (int, float))),
+                0.0,
+            )
+            file_ref = next(
+                (v for v in ev.values() if isinstance(v, str)),
+                "",
+            )
+
+        return Evidence(
+            metric=metric,
+            value=value,
+            references=[FileReference(file=str(file_ref))] if file_ref else [],
         )
     
     def _get_suggested_action(self) -> str:

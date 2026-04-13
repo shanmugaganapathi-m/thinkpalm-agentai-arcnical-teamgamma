@@ -171,7 +171,7 @@ def analyze(
         
         try:
             exporter = AnalysisExporter()
-            json_path = exporter.export(report)
+            json_path = exporter.export(report, per_file_loc=orchestrator.file_loc)
             console.print(f"[green]✓[/green] Exported to {json_path}", style="green")
         except Exception as e:
             console.print(f"[yellow]⚠[/yellow] Export failed: {e}", style="yellow")

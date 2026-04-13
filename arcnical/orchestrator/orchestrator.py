@@ -53,6 +53,7 @@ class Orchestrator:
         self._graph: Optional[CodeKnowledgeGraph] = None
         self._findings: dict = {}
         self._raw_metrics: dict = {}
+        self.file_loc: dict = {}  # {relative_filepath: loc} — populated by _compute_loc_metrics
 
     # ------------------------------------------------------------------
     # Public pipeline methods
@@ -412,16 +413,25 @@ class Orchestrator:
     # ------------------------------------------------------------------
 
     def _compute_loc_metrics(self) -> dict:
-        """Count total LOC across all source files."""
+        """Count total LOC across all source files and populate self.file_loc."""
         from arcnical.metrics.calculator import LOCCalculator
         loc_calc = LOCCalculator()
         total = 0
         _src_exts = {".py", ".ts", ".tsx", ".js", ".jsx"}
+        repo_root = Path(self.repo_path).resolve()
         for root, dirs, files in os.walk(self.repo_path):
             dirs[:] = [d for d in dirs if d not in _SKIP_DIRS]
             for fn in files:
                 if Path(fn).suffix in _src_exts:
-                    total += loc_calc.count_file_loc(os.path.join(root, fn))
+                    full_path = os.path.join(root, fn)
+                    loc = loc_calc.count_file_loc(full_path)
+                    total += loc
+                    # Store relative path so the graph works regardless of clone location
+                    try:
+                        rel = str(Path(full_path).resolve().relative_to(repo_root))
+                    except ValueError:
+                        rel = full_path
+                    self.file_loc[rel] = loc
         return {"loc_total": total}
 
     def _update_report_metrics(self, report: Report) -> None:

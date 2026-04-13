@@ -31,48 +31,54 @@ class AnalysisExporter:
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-    def export(self, report: Report, filename: str = "latest_analysis.json") -> Path:
+    def export(
+        self,
+        report: Report,
+        filename: str = "latest_analysis.json",
+        per_file_loc: Optional[Dict[str, int]] = None,
+    ) -> Path:
         """
         Export a complete analysis report to JSON.
-        
+
         Args:
             report: The Report object to export
             filename: Output filename (default: latest_analysis.json)
-            
+            per_file_loc: Optional {relative_path: loc} dict for graph nodes
+
         Returns:
             Path to the exported JSON file
-            
+
         Raises:
             ValueError: If report is invalid
         """
         if not isinstance(report, Report):
             raise ValueError("report must be a Report instance")
-        
-        # Convert report to dictionary
-        report_dict = self._report_to_dict(report)
-        
-        # Save to file
+
+        report_dict = self._report_to_dict(report, per_file_loc=per_file_loc or {})
+
         output_path = self.output_dir / filename
-        
         with open(output_path, 'w', encoding='utf-8') as f:
             json.dump(report_dict, f, indent=2, default=str)
-        
+
         return output_path
 
-    def _report_to_dict(self, report: Report) -> Dict[str, Any]:
+    def _report_to_dict(
+        self, report: Report, per_file_loc: Optional[Dict[str, int]] = None
+    ) -> Dict[str, Any]:
         """
         Convert Report object to dictionary.
-        
+
         Args:
             report: Report object to convert
-            
+            per_file_loc: Optional {relative_path: loc} for graph node data
+
         Returns:
             Dictionary representation of the report
         """
         return {
             "metadata": self._metadata_to_dict(report.metadata),
             "scores": self._scores_to_dict(report.scores),
-            "file_structure": self._file_structure_to_dict(report.summary),
+            "file_structure": self._file_structure_to_dict(report.summary, per_file_loc or {}),
             "findings": [self._finding_to_dict(f) for f in report.recommendations],
             "practice_detection": self._practice_detection_to_dict(report.practice_detection),
             "blocking_findings": [
@@ -110,21 +116,26 @@ class AnalysisExporter:
             "security": scores.security,
         }
 
-    def _file_structure_to_dict(self, summary: Any) -> Dict[str, Any]:
+    def _file_structure_to_dict(
+        self, summary: Any, per_file_loc: Optional[Dict[str, int]] = None
+    ) -> Dict[str, Any]:
         """
         Build file structure summary from report summary.
 
         Args:
             summary: Summary object from report
+            per_file_loc: {relative_path: loc} collected during analysis
 
         Returns:
-            Dictionary with file information
+            Dictionary with file information. ``files`` is always a
+            ``{path: loc}`` dict so the dashboard graph can build nodes.
         """
         if summary is None:
             return {"total_files": 0, "files": {}}
+
         return {
-            "total_files": getattr(summary, "file_count", 0) or 1,
-            "files": getattr(summary, "language_breakdown", {}),
+            "total_files": getattr(summary, "file_count", 0) or 0,
+            "files": per_file_loc if per_file_loc else {},
         }
 
     def _finding_to_dict(self, finding: Recommendation) -> Dict[str, Any]:
