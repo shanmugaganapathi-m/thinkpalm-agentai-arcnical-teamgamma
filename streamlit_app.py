@@ -417,6 +417,8 @@ code, pre {{
 .config-val {{
   font-size: 12px; color: var(--text-secondary);
   font-family: var(--font-mono); text-align: right;
+  max-width: 160px; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
 }}
 
 .config-val.ready {{ color: var(--accent-secondary); }}
@@ -883,11 +885,24 @@ def render_severity_card(level: str, count: int, meta: str, desc: str) -> str:
     Returns HTML string for st.markdown(unsafe_allow_html=True).
     """
     css_class = level.lower()
+    # Detect if meta looks like a file path (contains / or . with extension)
+    is_path = meta and ("/" in meta or "\\" in meta or (
+        "." in meta and not meta.startswith("None")
+    ))
+    if is_path and len(meta) > 50:
+        display_meta = "&#128196; " + meta[:50] + "…"
+        meta_html = f'<div class="sev-meta" title="{meta}" style="cursor:help">{display_meta}</div>'
+    elif is_path:
+        display_meta = "&#128196; " + meta
+        meta_html = f'<div class="sev-meta" title="{meta}">{display_meta}</div>'
+    else:
+        meta_html = f'<div class="sev-meta">{meta}</div>'
+
     return f"""
     <div class="sev-card {css_class}">
       <div>
         <div class="sev-label">{level}</div>
-        <div class="sev-meta">{meta}</div>
+        {meta_html}
         <div class="sev-desc">{desc}</div>
       </div>
       <div class="sev-count">{count}</div>
@@ -900,26 +915,40 @@ def render_score_ring(label: str, value: int, color: str) -> str:
     Builds one score-ring cell as a raw HTML string.
     Must be used inside render_scores_panel_component() which renders via
     st.iframe() — the only Streamlit call that does NOT sanitise SVG.
-    Circumference of r=22 circle = 2π×22 ≈ 138.2
+    Circumference of r=30 circle = 2π×30 ≈ 188.5
     """
-    circ = 138.2
-    offset = circ * (1 - value / 100)
+    # Defensive: score data may be missing/None or non-numeric depending on exporter.
+    try:
+        v = float(value)
+    except Exception:
+        v = 0.0
+    if v != v:  # NaN
+        v = 0.0
+    v = max(0.0, min(100.0, v))
+    value_i = int(round(v))
+
+    size = 72
+    center = size / 2
+    r = 30
+    stroke = 5
+    circ = 188.5
+    offset = circ * (1 - v / 100.0)
     return (
         f'<div style="text-align:center;padding:4px;">' +
         f'<div style="font-size:11px;text-transform:uppercase;letter-spacing:0.07em;' +
         f'color:#9b9fa6;font-family:Syne,sans-serif;font-weight:600;margin-bottom:10px;">' +
         f'{label}</div>' +
-        f'<div style="position:relative;width:54px;height:54px;margin:0 auto 4px;">' +
-        f'<svg viewBox="0 0 54 54" width="54" height="54" ' +
+        f'<div style="position:relative;width:{size}px;height:{size}px;margin:0 auto 4px;">' +
+        f'<svg viewBox="0 0 {size} {size}" width="{size}" height="{size}" ' +
         f'style="display:block;transform:rotate(-90deg);">' +
-        f'<circle cx="27" cy="27" r="22" fill="none" stroke="#1e2535" stroke-width="4"/>' +
-        f'<circle cx="27" cy="27" r="22" fill="none" stroke="{color}" stroke-width="4" ' +
+        f'<circle cx="{center}" cy="{center}" r="{r}" fill="none" stroke="#1e2535" stroke-width="{stroke}"/>' +
+        f'<circle cx="{center}" cy="{center}" r="{r}" fill="none" stroke="{color}" stroke-width="{stroke}" ' +
         f'stroke-dasharray="{circ:.1f}" stroke-dashoffset="{offset:.1f}" stroke-linecap="round"/>' +
         f'</svg>' +
-        f'<div style="position:absolute;top:0;left:0;width:54px;height:54px;' +
+        f'<div style="position:absolute;top:0;left:0;width:{size}px;height:{size}px;' +
         f'display:flex;align-items:center;justify-content:center;' +
-        f'font-family:Syne,sans-serif;font-size:14px;font-weight:700;color:{color};">' +
-        f'{value}%</div>' +
+        f'font-family:Syne,sans-serif;font-size:16px;font-weight:700;color:{color};">' +
+        f'{value_i}%</div>' +
         f'</div></div>'
     )
 
@@ -935,19 +964,19 @@ def render_scores_panel_component(score_items: list) -> None:
     html = (
         '<!DOCTYPE html><html><head>' +
         '<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700&display=swap" rel="stylesheet">' +
-        '<style>*{margin:0;padding:0;box-sizing:border-box;}body{background:transparent;}</style>' +
+        '<style>*{margin:0;padding:0;box-sizing:border-box;}html,body{background:transparent;overflow:hidden;}</style>' +
         '</head><body>' +
         '<div style="background:#141820;border:1px solid #1e2535;border-radius:10px;padding:16px 20px;">' +
         '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;' +
         'color:#9b9fa6;margin-bottom:16px;font-family:Syne,sans-serif;">' +
         'Architectural Health Scores</div>' +
-        '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">' +
+        '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px 10px;">' +
         rings +
         '</div></div>' +
         '</body></html>'
     )
-    # height: label(28) + ring(54) + value + padding ≈ 155px
-    st.iframe(html, height=155)
+    # Increased height to fit the 2×2 grid of larger rings without clipping.
+    st.iframe(html, height=290)
 
 
 def render_badge(level: str) -> str:
@@ -984,6 +1013,43 @@ def render_event_card(title: str, sub: str, status: str) -> str:
     """
 
 
+_HISTORY_PATH = Path(".arcnical/results/history.json")
+
+
+def _load_history() -> list:
+    """Return list of recent analysis entries (newest first, max 10)."""
+    try:
+        if _HISTORY_PATH.exists():
+            with open(_HISTORY_PATH, "r", encoding="utf-8") as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return []
+
+
+def _save_history_entry(repo_path: str, findings_total: int, status: str = "ok") -> None:
+    """Append a new entry to the history file."""
+    try:
+        _HISTORY_PATH.parent.mkdir(parents=True, exist_ok=True)
+        history = _load_history()
+        parts = Path(repo_path).parts
+        title = "/".join(parts[-2:]) if len(parts) >= 2 else repo_path
+        from datetime import datetime as _dt
+        timestamp = _dt.now().strftime("%Y-%m-%d %H:%M")
+        entry = {
+            "title": title,
+            "sub": f"{timestamp} · {findings_total} findings",
+            "status": status,
+        }
+        history.insert(0, entry)
+        history = history[:10]
+        with open(_HISTORY_PATH, "w", encoding="utf-8") as f:
+            import json as _json
+            _json.dump(history, f, indent=2)
+    except Exception:
+        pass
+
+
 def render_cli_block(cmd: str, label: str = "CLI Command") -> str:
     """HTML → .cli-block (monospace command display)"""
     return f"""
@@ -1003,6 +1069,36 @@ def _normalize_analysis_data(data: dict) -> dict:
     """
     meta = data.get("metadata", {})
     fs   = data.get("file_structure", {})
+
+    def _norm_key(k: object) -> str:
+        s = str(k or "").strip().lower()
+        s = s.replace("%", "")
+        for ch in (" ", "-", ".", "/"):
+            s = s.replace(ch, "_")
+        while "__" in s:
+            s = s.replace("__", "_")
+        return s.strip("_")
+
+    def _coerce_score(v: object) -> Optional[int]:
+        """
+        Accepts ints/floats/strings.
+        - If value looks like 0..1, treat as fraction and convert to percent.
+        - Clamp to 0..100.
+        """
+        if v is None:
+            return None
+        try:
+            if isinstance(v, str):
+                v = v.strip().replace("%", "")
+            f = float(v)
+        except Exception:
+            return None
+
+        # heuristics: 0..1 -> percent, otherwise assume already 0..100
+        if 0.0 <= f <= 1.0:
+            f *= 100.0
+        f = max(0.0, min(100.0, f))
+        return int(round(f))
 
     # ── findings_summary ──
     if "findings_summary" not in data:
@@ -1033,6 +1129,72 @@ def _normalize_analysis_data(data: dict) -> dict:
             data["llm_provider"] = "gemini"
         else:
             data["llm_provider"] = "—"
+
+    # ── scores (Overall/Maintainability/Security/Complexity) ──
+    # json_exporter formats can differ; normalize key names & scales.
+    if "scores" not in data or not isinstance(data.get("scores"), dict):
+        # try alternate locations commonly used by exporters
+        maybe = (
+            data.get("architectural_health_scores")
+            or data.get("health_scores")
+            or meta.get("scores")
+            or meta.get("health_scores")
+        )
+        if isinstance(maybe, dict):
+            data["scores"] = maybe
+        elif isinstance(maybe, list):
+            # e.g. [{"label":"Overall","value":85}, ...]
+            tmp: dict[str, object] = {}
+            for item in maybe:
+                if isinstance(item, dict):
+                    k = item.get("label") or item.get("name") or item.get("key")
+                    v = item.get("value") if "value" in item else item.get("score")
+                    if k is not None:
+                        tmp[str(k)] = v
+            data["scores"] = tmp
+        else:
+            data.setdefault("scores", {})
+
+    scores_raw = data.get("scores", {}) if isinstance(data.get("scores"), dict) else {}
+    scores_norm = {_norm_key(k): v for k, v in scores_raw.items()}
+
+    def _first(keys: list[str]) -> Optional[int]:
+        for k in keys:
+            if k in scores_norm:
+                val = _coerce_score(scores_norm.get(k))
+                if val is not None:
+                    return val
+        return None
+
+    overall = _first(["overall", "overall_score", "total", "total_score", "health", "health_score"])
+    maintainability = _first(["maintainability", "maintainability_score", "maintainability_index", "maint"])
+    security = _first(["security", "security_score", "security_index", "sec"])
+    complexity = _first(["complexity", "complexity_score", "complexity_index", "cyclomatic_complexity"])
+
+    # Only fill missing keys; never overwrite already-normalised values
+    scores_out = dict(scores_raw)
+    if "overall" not in scores_raw and overall is not None:
+        scores_out["overall"] = overall
+    if "maintainability" not in scores_raw and maintainability is not None:
+        scores_out["maintainability"] = maintainability
+    if "security" not in scores_raw and security is not None:
+        scores_out["security"] = security
+    if "complexity" not in scores_raw and complexity is not None:
+        scores_out["complexity"] = complexity
+
+    # If exporter uses capitalised labels only, also backfill from those
+    # (e.g., "Overall", "Maintainability", ...)
+    if any(k not in scores_out for k in ("overall", "maintainability", "security", "complexity")):
+        overall2 = _first(["overall", "overallscore"])
+        maintainability2 = _first(["maintainability"])
+        security2 = _first(["security"])
+        complexity2 = _first(["complexity"])
+        scores_out.setdefault("overall", overall2 if overall2 is not None else scores_out.get("overall"))
+        scores_out.setdefault("maintainability", maintainability2 if maintainability2 is not None else scores_out.get("maintainability"))
+        scores_out.setdefault("security", security2 if security2 is not None else scores_out.get("security"))
+        scores_out.setdefault("complexity", complexity2 if complexity2 is not None else scores_out.get("complexity"))
+
+    data["scores"] = scores_out
 
     # ── metrics.total_files ──
     if "metrics" not in data:
@@ -1070,6 +1232,159 @@ def _normalize_analysis_data(data: dict) -> dict:
             })
         rows.sort(key=lambda m: m["loc"], reverse=True)
         data["module_metrics"] = rows
+
+    # ── metrics.total_loc + avg_complexity (derived from module_metrics) ──
+    mods = data.get("module_metrics", [])
+    if mods:
+        total_loc = sum(m.get("loc", 0) for m in mods)
+        avg_cx = sum(m.get("complexity", 0) for m in mods) / len(mods)
+        data["metrics"]["total_loc"] = total_loc
+        data["metrics"]["avg_complexity"] = round(avg_cx, 1)
+        data["metrics"]["avg_loc_per_file"] = round(total_loc / len(mods), 1)
+
+    # ── derived score fallback (when exporter leaves 0.0 placeholders) ──
+    # If the analyzer/exporter hasn't implemented all score dimensions yet,
+    # compute reasonable proxy scores from existing metrics so the UI isn't stuck at 0%.
+    try:
+        scores_obj = data.get("scores", {})
+        if not isinstance(scores_obj, dict):
+            scores_obj = {}
+
+        def _get_num(key: str) -> Optional[float]:
+            v = scores_obj.get(key)
+            try:
+                return float(v)
+            except Exception:
+                return None
+
+        sec = _get_num("security")
+        if sec is None:
+            sec = 0.0
+
+        # Complexity score (higher is better): based on avg cyclomatic complexity proxy.
+        avg_cx_val = data.get("metrics", {}).get("avg_complexity")
+        try:
+            avg_cx_val = float(avg_cx_val)
+        except Exception:
+            avg_cx_val = None
+
+        complexity_score = None
+        if avg_cx_val is not None:
+            # Map avg complexity 0..20+ to score 100..0
+            complexity_score = max(0.0, min(100.0, 100.0 - (avg_cx_val / 20.0) * 100.0))
+
+        # Maintainability score (higher is better): scale findings by repo size (findings per file).
+        fsum = data.get("findings_summary", {}) or {}
+        c = int(fsum.get("critical", 0) or 0)
+        h = int(fsum.get("high", 0) or 0)
+        m = int(fsum.get("medium", 0) or 0)
+        l = int(fsum.get("low", 0) or 0)
+        weighted = c * 10 + h * 5 + m * 2 + l * 1
+        total_files_metric = data.get("metrics", {}).get("total_files") or fsum.get("total_files")
+        try:
+            total_files_metric = int(total_files_metric)
+        except Exception:
+            total_files_metric = 0
+        denom = max(1, total_files_metric)
+        findings_per_file = weighted / float(denom)
+        # Each ~10 weighted findings per file reduces ~100 points (clamped).
+        maintainability_score = max(0.0, min(100.0, 100.0 - findings_per_file * 10.0))
+
+        # Only fill in if missing or clearly placeholder (0.0) while we have signals.
+        if (_get_num("complexity") in (None, 0.0)) and complexity_score is not None:
+            scores_obj["complexity"] = round(complexity_score, 1)
+        if _get_num("maintainability") in (None, 0.0):
+            scores_obj["maintainability"] = round(maintainability_score, 1)
+
+        # Some exporters use "structure" instead of "complexity"; keep it aligned.
+        if (_get_num("structure") in (None, 0.0)) and complexity_score is not None:
+            scores_obj["structure"] = round(complexity_score, 1)
+
+        if _get_num("overall") in (None, 0.0):
+            parts = []
+            for k in ("maintainability", "security", "complexity"):
+                vv = _get_num(k)
+                if vv is not None and vv > 0:
+                    parts.append(vv)
+            if parts:
+                scores_obj["overall"] = round(sum(parts) / len(parts), 1)
+
+        data["scores"] = scores_obj
+    except Exception:
+        # Never break the app due to fallback score computation.
+        pass
+
+    # ── metrics.config_files + test_files (counted from file list) ──
+    all_files = list(fs.get("files", {}).keys())
+    if all_files:
+        def _norm_path(p: str) -> str:
+            return (p or "").replace("\\", "/").strip().lower()
+
+        def _is_test_file(p: str) -> bool:
+            fp = _norm_path(p)
+            name = fp.rsplit("/", 1)[-1]
+            # folders
+            if any(seg in fp for seg in ("/test/", "/tests/", "/__tests__/", "/spec/", "/specs/")):
+                return True
+            # filename conventions
+            if name.startswith(("test_", "tests_", "spec_")):
+                return True
+            if name.endswith((
+                ".spec.ts", ".spec.tsx", ".spec.js", ".spec.jsx",
+                ".test.ts", ".test.tsx", ".test.js", ".test.jsx",
+                "_test.py", "_tests.py", "test_.py",
+                ".spec.py", ".test.py",
+            )):
+                return True
+            # common patterns like foo.spec (no extension) or foo.test (no extension)
+            if name.endswith(".spec") or name.endswith(".test"):
+                return True
+            return False
+
+        def _is_config_file(p: str) -> bool:
+            fp = _norm_path(p)
+            name = fp.rsplit("/", 1)[-1]
+            # don't count test-related configs
+            if _is_test_file(fp):
+                return False
+
+            # extensions typically used for config
+            if name.endswith((
+                ".yaml", ".yml", ".toml", ".ini", ".cfg", ".env",
+                ".properties", ".conf",
+                ".json",
+            )):
+                return True
+
+            # JS/TS config conventions
+            if ".config." in name and name.endswith((".js", ".cjs", ".mjs", ".ts")):
+                return True
+
+            # common dotfiles / known config basenames
+            config_names = {
+                "dockerfile",
+                "makefile",
+                ".editorconfig",
+                ".gitignore",
+                ".gitattributes",
+                ".prettierrc", ".prettierrc.json", ".prettierrc.yaml", ".prettierrc.yml", ".prettierrc.toml",
+                ".eslintrc", ".eslintrc.json", ".eslintrc.yaml", ".eslintrc.yml", ".eslintrc.js", ".eslintrc.cjs",
+                "tsconfig.json", "jsconfig.json",
+                "package.json", "package-lock.json", "pnpm-lock.yaml", "yarn.lock",
+                "pyproject.toml", "setup.cfg", "setup.py", "requirements.txt",
+                "vite.config.ts", "vite.config.js",
+                "vitest.config.ts", "vitest.config.js",
+                "rollup.config.js", "rollup.config.ts",
+                "webpack.config.js", "webpack.config.ts",
+                "eslint.config.js", "eslint.config.ts",
+            }
+            if name in config_names:
+                return True
+
+            return False
+
+        data["metrics"]["test_files"] = sum(1 for f in all_files if _is_test_file(f))
+        data["metrics"]["config_files"] = sum(1 for f in all_files if _is_config_file(f))
 
     return data
 
@@ -1112,8 +1427,8 @@ def load_analysis_data(json_path: Optional[str] = None) -> Optional[dict]:
         "metrics": {
             "total_files": 28,
             "total_loc": 3240,
-            "yaml_configs": 4,
-            "test_cases": 90,
+            "config_files": 4,
+            "test_files": 12,
             "avg_complexity": 9.2,
             "avg_loc_per_file": 115.7,
         },
@@ -1297,19 +1612,29 @@ def render_sidebar(data: dict) -> dict:
             type="password",
             placeholder=f"{env_key_map.get(provider, 'API_KEY')} …",
             key="api_key_input",
+            disabled=True,
         ).strip()
 
-        _key_prefix = {"claude": "sk-ant-", "openai": "sk-", "gemini": "AI"}
-        if api_key and not api_key.startswith(_key_prefix.get(provider, "")):
-            st.warning(f"Key doesn't look like a {provider} key — expected prefix `{_key_prefix.get(provider, '?')}`")
-
+        st.markdown(
+            """
+            <style>
+            div[data-testid="stRadio"] label:last-of-type {
+                opacity: 0.38;
+                pointer-events: none;
+                cursor: not-allowed;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
         depth = st.radio(
             "Analysis Depth",
             options=["quick", "standard"],
-            index=0 if data.get("analysis_depth", "standard") == "quick" else 1,
+            index=0,
             key="depth_radio",
             horizontal=True,
         )
+        depth = "quick"  # standard is display-only (coming soon)
 
         st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
@@ -1374,15 +1699,18 @@ def render_sidebar(data: dict) -> dict:
         # ── Repo History / Event Cards (HTML → .sidebar-events) ──
         st.markdown('<div class="sidebar-section-label">Recent Analyses</div>', unsafe_allow_html=True)
 
-        history_events = [
-            ("arcnical/arcnical",     "2026-04-14 16:41 · 16 findings", "ok"),
-            ("arcnical/arcnical",     "2026-04-14 14:12 · 18 findings", "warn"),
-            ("test/sample-repo",      "2026-04-13 09:05 · 4 findings",  "ok"),
-            ("internal/legacy-svc",   "2026-04-12 17:30 · 31 findings", "err"),
-        ]
-
-        for title, sub, status in history_events:
-            st.markdown(render_event_card(title, sub, status), unsafe_allow_html=True)
+        history_events = _load_history()
+        if history_events:
+            for entry in history_events:
+                st.markdown(
+                    render_event_card(entry["title"], entry["sub"], entry["status"]),
+                    unsafe_allow_html=True,
+                )
+        else:
+            st.markdown(
+                '<div style="font-size:11px;color:var(--text-muted);padding:6px 0;">No analyses yet</div>',
+                unsafe_allow_html=True,
+            )
 
     return {
         "provider": provider,
@@ -1401,15 +1729,30 @@ def render_overview(data: dict):
 
     summary = data.get("findings_summary", {})
 
+    # Build per-severity top finding title for subtitle
+    findings = data.get("findings", [])
+    def _top_title(sev: str) -> str:
+        matches = [f for f in findings if (f.get("severity") or "").upper() == sev]
+        if matches:
+            return matches[0].get("title", "—")
+        return "None detected"
+
+    _sev_desc = {
+        "CRITICAL": "Requires immediate attention",
+        "HIGH":     "Significant risk to maintainability",
+        "MEDIUM":   "Refactoring recommended",
+        "LOW":      "Minor improvements available",
+    }
+
     # ── Severity Cards 2×2 grid (HTML → .severity-grid) ──
     c1, c2 = st.columns(2)
     with c1:
         st.markdown(render_severity_card("CRITICAL", summary.get("critical", 0),
-                                         "Circular Imports", "Requires immediate attention"),
+                                         _top_title("CRITICAL"), _sev_desc["CRITICAL"]),
                     unsafe_allow_html=True)
     with c2:
         st.markdown(render_severity_card("HIGH", summary.get("high", 0),
-                                         "God Classes Detected", "Significant risk to maintainability"),
+                                         _top_title("HIGH"), _sev_desc["HIGH"]),
                     unsafe_allow_html=True)
 
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
@@ -1417,11 +1760,11 @@ def render_overview(data: dict):
     c3, c4 = st.columns(2)
     with c3:
         st.markdown(render_severity_card("MEDIUM", summary.get("medium", 0),
-                                         "High Complexity Modules", "Refactoring recommended"),
+                                         _top_title("MEDIUM"), _sev_desc["MEDIUM"]),
                     unsafe_allow_html=True)
     with c4:
         st.markdown(render_severity_card("LOW", summary.get("low", 0),
-                                         "Style & Convention", "Minor improvements available"),
+                                         _top_title("LOW"), _sev_desc["LOW"]),
                     unsafe_allow_html=True)
 
     st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
@@ -1446,13 +1789,13 @@ def render_overview(data: dict):
             ("Last Run",      ts_fmt),
             ("Findings",      str(summary.get("total", "—"))),
             ("Files Analyzed",str(data.get("metrics", {}).get("total_files", "—"))),
-            ("Repo",          data.get("repo_path", "—")),
+            ("Repo",          "/".join(Path(data.get("repo_path", "—")).parts[-2:]) if data.get("repo_path") else "—"),
         ]
 
         rows_html = "".join(
             f'<div class="config-row">'
             f'<span class="config-key">{k}</span>'
-            f'{"" if k == "Status" else "<span class=config-val>"}{v}{"" if k == "Status" else "</span>"}'
+            f'<span class="config-val{" ready" if k == "Status" else ""}">{v}</span>'
             f'</div>'
             for k, v in config_rows
         )
@@ -1467,10 +1810,10 @@ def render_overview(data: dict):
 
     with scores_col:
         score_items = [
-            ("Overall",         scores.get("overall", 85),        COLORS["accent_primary"]),
-            ("Maintainability", scores.get("maintainability", 78), COLORS["accent_amber"]),
-            ("Security",        scores.get("security", 92),        COLORS["accent_secondary"]),
-            ("Complexity",      scores.get("complexity", 74),      COLORS["accent_rose"]),
+            ("Overall",         scores.get("overall", 0),         COLORS["accent_primary"]),
+            ("Maintainability", scores.get("maintainability", 0),  COLORS["accent_amber"]),
+            ("Security",        scores.get("security", 0),         COLORS["accent_secondary"]),
+            ("Complexity",      scores.get("complexity", 0),       COLORS["accent_rose"]),
         ]
         # Use components.html to bypass Streamlit markdown SVG sanitiser
         render_scores_panel_component(score_items)
@@ -1500,17 +1843,19 @@ def render_metrics(data: dict):
         """
 
     with col1:
+        total_files = metrics.get("total_files", 0)
         st.html(metric_card_html(
-            "Total Files", str(metrics.get("total_files", 28)), "Python source files",
-            metrics.get("total_files", 28) / 50 * 100, COLORS["accent_primary"]))
+            "Total Files", str(total_files), "Source files analyzed",
+            min(100, total_files / 50 * 100), COLORS["accent_primary"]))
 
     with col2:
+        total_loc = metrics.get("total_loc", 0)
         st.html(metric_card_html(
-            "Lines of Code", f"{metrics.get('total_loc', 3240):,}", "Across all modules",
-            metrics.get("total_loc", 3240) / 5000 * 100, COLORS["accent_secondary"]))
+            "Lines of Code", f"{total_loc:,}", "Across all modules",
+            min(100, total_loc / 5000 * 100), COLORS["accent_secondary"]))
 
     with col3:
-        avg_cx = metrics.get("avg_complexity", 9.2)
+        avg_cx = metrics.get("avg_complexity", 0.0)
         st.html(metric_card_html(
             "Avg Complexity", f"{avg_cx:.1f}", "Cyclomatic complexity",
             min(100, avg_cx / 20 * 100), COLORS["accent_amber"]))
@@ -1655,10 +2000,10 @@ def render_files(data: dict):
     # ── File stat cards (HTML → .files-stats-row) ──
     c1, c2, c3, c4 = st.columns(4)
     stats = [
-        (str(metrics.get("total_files", 28)), "Python Files"),
-        (f"{metrics.get('total_loc', 3240):,}", "Total Lines"),
-        (str(metrics.get("yaml_configs", 4)), "YAML Configs"),
-        (f"{metrics.get('test_cases', 90)}+", "Test Cases"),
+        (str(metrics.get("total_files", 0)), "Source Files"),
+        (f"{metrics.get('total_loc', 0):,}", "Total Lines"),
+        (str(metrics.get("config_files", 0)), "Config Files"),
+        (str(metrics.get("test_files", 0)), "Test Files"),
     ]
     for col, (val, label) in zip([c1, c2, c3, c4], stats):
         with col:
@@ -2073,6 +2418,11 @@ def main():
                     result = _normalize_analysis_data(result)
                     st.session_state.analysis_data = result
                     data = result
+                    _save_history_entry(
+                        repo_path=repo,
+                        findings_total=result.get("findings_summary", {}).get("total", 0),
+                        status="ok",
+                    )
                     st.success(message)
                 else:
                     st.error(message)
