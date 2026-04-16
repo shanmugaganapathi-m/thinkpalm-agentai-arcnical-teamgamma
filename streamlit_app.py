@@ -24,7 +24,7 @@ COLORS (CSS vars → inline style strings)
   --accent-rose:      #f54b6a   →  CRITICAL severity
   --text-primary:     #e8eaf2   →  headings, primary content
   --text-secondary:   #8892a4   →  body text, labels
-  --text-muted:       #4a5568   →  meta, timestamps, muted labels
+  --text-muted:       #9b9fa6;  →  meta, timestamps, muted labels
 
 TYPOGRAPHY
   --font-display:  'Syne' (800/700/600)   →  Google Font import in CSS
@@ -80,7 +80,7 @@ COLORS = {
     "accent_rose":     "#f54b6a",
     "text_primary":    "#e8eaf2",
     "text_secondary":  "#8892a4",
-    "text_muted":      "#4a5568",
+    "text_muted":      "#9b9fa6",
     "critical":        "#f54b6a",
     "high":            "#f5a623",
     "medium":          "#7c5cfc",
@@ -268,11 +268,13 @@ code, pre {{
 .sidebar-logo-block {{
   background: var(--bg-surface);
   border-bottom: 1px solid var(--border);
-  padding: 12px 16px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  padding: 8px 0;
   margin-bottom: 0;
+}}
+.sidebar-logo-block svg {{
+  display: block;
+  width: 100%;
+  height: auto;
 }}
 
 .logo-icon {{
@@ -905,7 +907,7 @@ def render_score_ring(label: str, value: int, color: str) -> str:
     return (
         f'<div style="text-align:center;padding:4px;">' +
         f'<div style="font-size:11px;text-transform:uppercase;letter-spacing:0.07em;' +
-        f'color:#4a5568;font-family:Syne,sans-serif;font-weight:600;margin-bottom:10px;">' +
+        f'color:#9b9fa6;font-family:Syne,sans-serif;font-weight:600;margin-bottom:10px;">' +
         f'{label}</div>' +
         f'<div style="position:relative;width:54px;height:54px;margin:0 auto 4px;">' +
         f'<svg viewBox="0 0 54 54" width="54" height="54" ' +
@@ -937,7 +939,7 @@ def render_scores_panel_component(score_items: list) -> None:
         '</head><body>' +
         '<div style="background:#141820;border:1px solid #1e2535;border-radius:10px;padding:16px 20px;">' +
         '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;' +
-        'color:#4a5568;margin-bottom:16px;font-family:Syne,sans-serif;">' +
+        'color:#9b9fa6;margin-bottom:16px;font-family:Syne,sans-serif;">' +
         'Architectural Health Scores</div>' +
         '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">' +
         rings +
@@ -994,6 +996,56 @@ def render_cli_block(cmd: str, label: str = "CLI Command") -> str:
 
 # ── DATA LOADING ─────────────────────────────────────────────────────────────
 
+def _normalize_analysis_data(data: dict) -> dict:
+    """
+    Map real JSON keys (from json_exporter) to the flat keys the UI widgets read.
+    Safe to call on already-normalised or demo data — won't overwrite existing keys.
+    """
+    meta = data.get("metadata", {})
+    fs   = data.get("file_structure", {})
+
+    # ── findings_summary ──
+    if "findings_summary" not in data:
+        counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
+        for f in data.get("findings", []):
+            sev = str(f.get("severity", "")).lower()
+            if sev in counts:
+                counts[sev] += 1
+        data["findings_summary"] = {**counts, "total": sum(counts.values())}
+
+    # ── flat metadata keys ──
+    if "llm_model" not in data:
+        data["llm_model"] = meta.get("model", "—")
+    if "analysis_depth" not in data:
+        raw_depth = meta.get("depth", "—")
+        data["analysis_depth"] = raw_depth if raw_depth else "—"
+    if "analysis_timestamp" not in data:
+        data["analysis_timestamp"] = (
+            meta.get("generated_at") or data.get("generated_at") or ""
+        )
+    if "llm_provider" not in data:
+        model = data["llm_model"].lower()
+        if "claude" in model:
+            data["llm_provider"] = "claude"
+        elif "gpt" in model or "openai" in model:
+            data["llm_provider"] = "openai"
+        elif "gemini" in model:
+            data["llm_provider"] = "gemini"
+        else:
+            data["llm_provider"] = "—"
+
+    # ── metrics.total_files ──
+    if "metrics" not in data:
+        data["metrics"] = {}
+    if "total_files" not in data["metrics"]:
+        # prefer explicit count, fall back to len(files dict)
+        data["metrics"]["total_files"] = (
+            fs.get("total_files") or len(fs.get("files", {}))
+        )
+
+    return data
+
+
 def load_analysis_data(json_path: Optional[str] = None) -> Optional[dict]:
     """
     Load analysis JSON from json_exporter.py output.
@@ -1003,7 +1055,7 @@ def load_analysis_data(json_path: Optional[str] = None) -> Optional[dict]:
     if json_path and Path(json_path).exists():
         try:
             with open(json_path) as f:
-                return json.load(f)
+                return _normalize_analysis_data(json.load(f))
         except Exception as e:
             st.error(f"Failed to load analysis data: {e}")
             return None
@@ -1151,11 +1203,38 @@ def render_sidebar(data: dict) -> dict:
         # ── Logo (HTML → .sidebar-logo-block) ──
         st.markdown("""
         <div class="sidebar-logo-block">
-          <div class="logo-icon"><span class="logo-icon-letter">A</span></div>
-          <div>
-            <div class="logo-text">Arcnical</div>
-            <div class="logo-tag">Architecture Needs Intelligence</div>
-          </div>
+          <svg width="100%" viewBox="0 0 680 260" role="img" xmlns="http://www.w3.org/2000/svg">
+            <defs><clipPath id="lensclip"><circle cx="148" cy="130" r="88"/></clipPath></defs>
+            <path d="M 148,42 A 88,88 0 0,1 224.2,86" fill="none" stroke="#d902ee" stroke-width="7" stroke-linecap="butt"/>
+            <path d="M 227,93 A 88,88 0 0,1 218,177" fill="none" stroke="#d902ee" stroke-width="7" stroke-linecap="butt"/>
+            <path d="M 214,183 A 88,88 0 0,1 148,218" fill="none" stroke="#e6b84a" stroke-width="7" stroke-linecap="butt"/>
+            <path d="M 141,218 A 88,88 0 0,1 75,177" fill="none" stroke="#e6b84a" stroke-width="7" stroke-linecap="butt"/>
+            <path d="M 72,170 A 88,88 0 0,1 148,42" fill="none" stroke="#f162ff" stroke-width="7" stroke-linecap="butt"/>
+            <circle cx="148" cy="130" r="66" fill="none" stroke="#d902ee" stroke-width="1.2" opacity="0.4"/>
+            <polygon points="148,102 172.2,116 172.2,144 148,158 123.8,144 123.8,116" fill="none" stroke="#e6b84a" stroke-width="2" stroke-linejoin="round"/>
+            <line x1="148" y1="102" x2="148" y2="66" stroke="#d902ee" stroke-width="1.5" opacity="0.9"/>
+            <line x1="172.2" y1="144" x2="205" y2="163" stroke="#d902ee" stroke-width="1.5" opacity="0.9"/>
+            <line x1="123.8" y1="144" x2="91" y2="163" stroke="#d902ee" stroke-width="1.5" opacity="0.9"/>
+            <circle cx="148" cy="66" r="3.5" fill="#e6b84a"/>
+            <circle cx="205" cy="163" r="3.5" fill="#e6b84a"/>
+            <circle cx="91" cy="163" r="3.5" fill="#e6b84a"/>
+            <circle cx="148" cy="102" r="2.5" fill="#f162ff"/>
+            <circle cx="172.2" cy="116" r="2.5" fill="#f162ff"/>
+            <circle cx="172.2" cy="144" r="2.5" fill="#f162ff"/>
+            <circle cx="148" cy="158" r="2.5" fill="#f162ff"/>
+            <circle cx="123.8" cy="144" r="2.5" fill="#f162ff"/>
+            <circle cx="123.8" cy="116" r="2.5" fill="#f162ff"/>
+            <circle cx="148" cy="130" r="7" fill="#d902ee"/>
+            <circle cx="148" cy="130" r="3" fill="#00c8b4"/>
+            <line x1="148" y1="62" x2="148" y2="68" stroke="#e6b84a" stroke-width="1.5" opacity="0.6"/>
+            <line x1="214" y1="130" x2="208" y2="130" stroke="#e6b84a" stroke-width="1.5" opacity="0.6"/>
+            <line x1="82" y1="130" x2="88" y2="130" stroke="#e6b84a" stroke-width="1.5" opacity="0.6"/>
+            <line x1="148" y1="198" x2="148" y2="192" stroke="#e6b84a" stroke-width="1.5" opacity="0.6"/>
+            <text x="268" y="152" font-family="'Helvetica Neue', Arial, sans-serif" font-size="72" font-weight="800" letter-spacing="-2">
+              <tspan fill="#d902ee">Arc</tspan><tspan fill="#e6b84a">nical</tspan>
+            </text>
+            <text x="269" y="183" font-family="'Helvetica Neue', Arial, sans-serif" font-size="17" font-weight="600" letter-spacing="2.5" fill="#00c8b4">Architecture Meets Intelligence</text>
+          </svg>
         </div>
         """, unsafe_allow_html=True)
 
@@ -1405,7 +1484,7 @@ def render_metrics(data: dict):
             st.html(
                 f'<div style="background:#141820;border:1px solid #1e2535;border-radius:10px;padding:16px;">'
                 f'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;'
-                f'color:#4a5568;font-family:\'Syne\',sans-serif;margin-bottom:12px;">Top Complexity</div>'
+                f'color:#9b9fa6;font-family:\'Syne\',sans-serif;margin-bottom:12px;">Top Complexity</div>'
                 f'{bars}</div>'
             )
 
@@ -1417,7 +1496,7 @@ def render_metrics(data: dict):
             st.html(
                 f'<div style="background:#141820;border:1px solid #1e2535;border-radius:10px;padding:16px;">'
                 f'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;'
-                f'color:#4a5568;font-family:\'Syne\',sans-serif;margin-bottom:12px;">Largest Files (LOC)</div>'
+                f'color:#9b9fa6;font-family:\'Syne\',sans-serif;margin-bottom:12px;">Largest Files (LOC)</div>'
                 f'{bars}</div>'
             )
 
@@ -1495,82 +1574,16 @@ def render_graph(data: dict, config: dict):
             st.warning(f"Graph render error: {e}")
 
     if not pyvis_loaded:
-        # ── Inline SVG demo (matches prototype canvas) ──
-        svg_demo = """
-        <div style="background:var(--bg-card);border:1px solid var(--border);
-             border-radius:var(--radius-md);padding:0;overflow:hidden;height:400px;position:relative;">
-          <svg width="100%" height="100%" viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <radialGradient id="g-orch" cx="40%" cy="35%">
-                <stop offset="0%" stop-color="#f54b6a" stop-opacity="0.8"/>
-                <stop offset="100%" stop-color="#f54b6a" stop-opacity="0.3"/>
-              </radialGradient>
-              <radialGradient id="g-graph" cx="40%" cy="35%">
-                <stop offset="0%" stop-color="#f5a623" stop-opacity="0.8"/>
-                <stop offset="100%" stop-color="#f5a623" stop-opacity="0.3"/>
-              </radialGradient>
-              <radialGradient id="g-schema" cx="40%" cy="35%">
-                <stop offset="0%" stop-color="#7c5cfc" stop-opacity="0.8"/>
-                <stop offset="100%" stop-color="#7c5cfc" stop-opacity="0.3"/>
-              </radialGradient>
-              <radialGradient id="g-util" cx="40%" cy="35%">
-                <stop offset="0%" stop-color="#00d4aa" stop-opacity="0.8"/>
-                <stop offset="100%" stop-color="#00d4aa" stop-opacity="0.3"/>
-              </radialGradient>
-            </defs>
-            <!-- Edges -->
-            <line x1="400" y1="200" x2="600" y2="120" stroke="#1e2535" stroke-width="1" stroke-opacity="0.5"/>
-            <line x1="400" y1="200" x2="200" y2="120" stroke="#1e2535" stroke-width="1" stroke-opacity="0.5"/>
-            <line x1="400" y1="200" x2="520" y2="280" stroke="#1e2535" stroke-width="1" stroke-opacity="0.5"/>
-            <line x1="400" y1="200" x2="640" y2="180" stroke="#1e2535" stroke-width="1" stroke-opacity="0.5"/>
-            <line x1="400" y1="200" x2="400" y2="328" stroke="#1e2535" stroke-width="1" stroke-opacity="0.5"/>
-            <!-- Circular dep (dashed red) -->
-            <line x1="400" y1="200" x2="600" y2="120" stroke="#f54b6a" stroke-width="1.5" stroke-opacity="0.7" stroke-dasharray="4 3"/>
-            <line x1="600" y1="120" x2="400" y2="200" stroke="#f54b6a" stroke-width="1.5" stroke-opacity="0.7" stroke-dasharray="4 3"/>
-            <!-- Nodes -->
-            <circle cx="400" cy="200" r="22" fill="#f54b6a" fill-opacity="0.08"/>
-            <circle cx="400" cy="200" r="18" fill="url(#g-orch)" stroke="#f54b6a" stroke-width="1.5"/>
-            <text x="400" y="227" text-anchor="middle" fill="#8892a4" font-size="9" font-family="DM Mono, monospace">orchestrator</text>
-
-            <circle cx="600" cy="120" r="18" fill="#f5a623" fill-opacity="0.08"/>
-            <circle cx="600" cy="120" r="14" fill="url(#g-graph)" stroke="#f5a623" stroke-width="1.5"/>
-            <text x="600" y="144" text-anchor="middle" fill="#8892a4" font-size="9" font-family="DM Mono, monospace">graph_builder</text>
-
-            <circle cx="200" cy="120" r="16" fill="#7c5cfc" fill-opacity="0.08"/>
-            <circle cx="200" cy="120" r="13" fill="url(#g-schema)" stroke="#7c5cfc" stroke-width="1.5"/>
-            <text x="200" y="142" text-anchor="middle" fill="#8892a4" font-size="9" font-family="DM Mono, monospace">schemas</text>
-
-            <circle cx="160" cy="240" r="15" fill="#7c5cfc" fill-opacity="0.08"/>
-            <circle cx="160" cy="240" r="12" fill="url(#g-schema)" stroke="#7c5cfc" stroke-width="1.5"/>
-            <text x="160" y="261" text-anchor="middle" fill="#8892a4" font-size="9" font-family="DM Mono, monospace">py_parser</text>
-
-            <circle cx="520" cy="280" r="15" fill="#00d4aa" fill-opacity="0.08"/>
-            <circle cx="520" cy="280" r="12" fill="url(#g-util)" stroke="#00d4aa" stroke-width="1.5"/>
-            <text x="520" y="301" text-anchor="middle" fill="#8892a4" font-size="9" font-family="DM Mono, monospace">heuristics</text>
-
-            <circle cx="640" cy="180" r="14" fill="#00d4aa" fill-opacity="0.08"/>
-            <circle cx="640" cy="180" r="11" fill="url(#g-util)" stroke="#00d4aa" stroke-width="1.5"/>
-            <text x="640" y="200" text-anchor="middle" fill="#8892a4" font-size="9" font-family="DM Mono, monospace">report</text>
-
-            <circle cx="400" cy="328" r="13" fill="#00d4aa" fill-opacity="0.08"/>
-            <circle cx="400" cy="328" r="10" fill="url(#g-util)" stroke="#00d4aa" stroke-width="1.5"/>
-            <text x="400" y="348" text-anchor="middle" fill="#8892a4" font-size="9" font-family="DM Mono, monospace">cli</text>
-
-            <circle cx="720" cy="80" r="11" fill="#6b7280" fill-opacity="0.08"/>
-            <circle cx="720" cy="80" r="8" fill="#6b7280" fill-opacity="0.5" stroke="#6b7280" stroke-width="1"/>
-            <text x="720" y="100" text-anchor="middle" fill="#8892a4" font-size="9" font-family="DM Mono, monospace">claude</text>
-
-            <circle cx="730" cy="160" r="10" fill="#6b7280" fill-opacity="0.08"/>
-            <circle cx="730" cy="160" r="7" fill="#6b7280" fill-opacity="0.5" stroke="#6b7280" stroke-width="1"/>
-            <text x="730" y="178" text-anchor="middle" fill="#8892a4" font-size="9" font-family="DM Mono, monospace">openai</text>
-          </svg>
-          <div style="position:absolute;top:10px;right:12px;
-               background:rgba(245,75,106,0.1);border:1px solid rgba(245,75,106,0.3);
-               border-radius:6px;padding:4px 10px;font-family:'DM Mono',monospace;
-               font-size:10px;color:#f54b6a;">⚠ 2 circular deps</div>
-        </div>
-        """
-        st.markdown(svg_demo, unsafe_allow_html=True)
+        # ── Build real graph from analysis data ──
+        try:
+            from arcnical.ui.graph_components import StreamlitGraphComponent
+            graph = StreamlitGraphComponent.build_dependency_graph(data)
+            if graph.nodes():
+                StreamlitGraphComponent.display_graph_in_streamlit(graph)
+            else:
+                st.info("No file structure data found. Run an analysis first.")
+        except Exception as e:
+            st.error(f"Graph render error: {e}")
 
     # ── Legend (HTML → .graph-legend) ──
     st.markdown("""
@@ -1802,7 +1815,7 @@ def render_about():
             f'color:white;flex-shrink:0;background:{bg};">{init}</div>'
             f'<div>'
             f'<div style="font-size:12.5px;font-weight:600;color:#e8eaf2;">{name}</div>'
-            f'<div style="font-size:11px;color:#4a5568;font-family:\'DM Mono\',monospace;">{role}</div>'
+            f'<div style="font-size:11px;color:#9b9fa6;font-family:\'DM Mono\',monospace;">{role}</div>'
             f'</div></div>'
             for init, name, role, bg in team_cards
         )
@@ -1839,7 +1852,7 @@ def render_about():
             f'<div style="font-family:\'Syne\',sans-serif;font-size:13px;font-weight:700;'
             f'color:#e8eaf2;margin-bottom:12px;">⬡ Analysis Layers</div>'
             f'{layers_html}'
-            f'<div style="padding-top:8px;font-size:11px;color:#4a5568;font-family:\'DM Mono\',monospace;">'
+            f'<div style="padding-top:8px;font-size:11px;color:#9b9fa6;font-family:\'DM Mono\',monospace;">'
             f'L1 → L2 → L3 → L4 pipeline</div>'
             f'</div>',
             unsafe_allow_html=True,
@@ -1861,7 +1874,7 @@ def render_about():
         f'<div style="background:#0f1218;border:1px solid #1e2535;border-radius:8px;'
         f'padding:14px 16px;">'
         f'<div style="font-size:9px;text-transform:uppercase;letter-spacing:0.1em;'
-        f'color:#4a5568;font-family:\'Syne\',sans-serif;font-weight:700;margin-bottom:6px;">{key}</div>'
+        f'color:#9b9fa6;font-family:\'Syne\',sans-serif;font-weight:700;margin-bottom:6px;">{key}</div>'
         f'<div style="font-size:12px;color:#e8eaf2;font-family:\'DM Mono\',monospace;'
         f'line-height:1.5;border-left:2px solid {color};padding-left:8px;">{val}</div>'
         f'</div>'
@@ -1975,6 +1988,7 @@ def main():
                     provider=config["provider"],
                 )
                 if success and result:
+                    result = _normalize_analysis_data(result)
                     st.session_state.analysis_data = result
                     data = result
                     st.success(message)

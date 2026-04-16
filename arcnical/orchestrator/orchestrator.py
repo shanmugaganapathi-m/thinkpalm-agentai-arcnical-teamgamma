@@ -467,6 +467,88 @@ class Orchestrator:
             file_count=self._parse_result.total_files if self._parse_result else 0,
         )
 
+    def build_file_imports(self) -> dict:
+        """
+        Build {source_rel_path: [target_rel_path, ...]} from parsed imports.
+
+        Only includes edges where both endpoints are known files in file_loc.
+        Relative TS/JS imports are resolved to actual file paths.
+        Python module-dot-notation is converted to path form.
+        Paths are normalised to forward slashes.
+        """
+        if not self._parse_result or not self.file_loc:
+            return {}
+
+        repo_root = Path(self.repo_path).resolve()
+        # Normalise known-file keys to forward slashes for consistent lookup
+        known = {k.replace("\\", "/"): k for k in self.file_loc}
+
+        result: dict = {}
+
+        for imp in self._parse_result.imports:
+            # ── source file → relative fwd-slash path ──
+            try:
+                src_rel = (
+                    Path(imp.source_file).resolve()
+                    .relative_to(repo_root)
+                    .as_posix()
+                )
+            except (ValueError, OSError):
+                continue
+            if src_rel not in known:
+                continue
+
+            target_rel = None
+            mod = imp.target_module
+
+            if imp.language == "python":
+                # e.g. arcnical.graph.builder -> arcnical/graph/builder.py
+                candidate = mod.replace(".", "/") + ".py"
+                if candidate in known:
+                    target_rel = candidate
+                else:
+                    candidate_init = mod.replace(".", "/") + "/__init__.py"
+                    if candidate_init in known:
+                        target_rel = candidate_init
+
+            else:
+                # TypeScript / JavaScript
+                if mod.startswith("."):
+                    # Relative import – resolve against source directory
+                    try:
+                        src_dir = Path(imp.source_file).resolve().parent
+                        resolved = (src_dir / mod).resolve()
+                        for ext in (".ts", ".tsx", ".js", ".jsx"):
+                            fwd = resolved.with_suffix(ext).as_posix()
+                            try:
+                                rel = Path(fwd).relative_to(repo_root).as_posix()
+                            except ValueError:
+                                continue
+                            if rel in known:
+                                target_rel = rel
+                                break
+                        if not target_rel:
+                            # Try index file
+                            for ext in (".ts", ".tsx", ".js"):
+                                idx = (resolved / ("index" + ext)).as_posix()
+                                try:
+                                    rel = Path(idx).relative_to(repo_root).as_posix()
+                                except ValueError:
+                                    continue
+                                if rel in known:
+                                    target_rel = rel
+                                    break
+                    except Exception:
+                        pass
+                # Non-relative (npm packages) – skip
+
+            if target_rel and target_rel != src_rel:
+                result.setdefault(src_rel, [])
+                if target_rel not in result[src_rel]:
+                    result[src_rel].append(target_rel)
+
+        return result
+
     def _compute_graph_hash(self) -> str:
         if self._graph is None:
             return hashlib.sha256(b"empty").hexdigest()

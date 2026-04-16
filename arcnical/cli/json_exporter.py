@@ -36,6 +36,8 @@ class AnalysisExporter:
         report: Report,
         filename: str = "latest_analysis.json",
         per_file_loc: Optional[Dict[str, int]] = None,
+        file_imports: Optional[Dict[str, list]] = None,
+        repo_path: Optional[str] = None,
     ) -> Path:
         """
         Export a complete analysis report to JSON.
@@ -54,7 +56,12 @@ class AnalysisExporter:
         if not isinstance(report, Report):
             raise ValueError("report must be a Report instance")
 
-        report_dict = self._report_to_dict(report, per_file_loc=per_file_loc or {})
+        report_dict = self._report_to_dict(
+            report,
+            per_file_loc=per_file_loc or {},
+            file_imports=file_imports or {},
+            repo_path=repo_path or "",
+        )
 
         output_path = self.output_dir / filename
         with open(output_path, 'w', encoding='utf-8') as f:
@@ -63,7 +70,11 @@ class AnalysisExporter:
         return output_path
 
     def _report_to_dict(
-        self, report: Report, per_file_loc: Optional[Dict[str, int]] = None
+        self,
+        report: Report,
+        per_file_loc: Optional[Dict[str, int]] = None,
+        file_imports: Optional[Dict[str, list]] = None,
+        repo_path: str = "",
     ) -> Dict[str, Any]:
         """
         Convert Report object to dictionary.
@@ -75,18 +86,45 @@ class AnalysisExporter:
         Returns:
             Dictionary representation of the report
         """
+        findings_list = [self._finding_to_dict(f) for f in report.recommendations]
+        severity_counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
+        for f in report.recommendations:
+            sev = (f.severity.value if hasattr(f.severity, "value") else str(f.severity)).lower()
+            if sev in severity_counts:
+                severity_counts[sev] += 1
+        findings_summary = {**severity_counts, "total": sum(severity_counts.values())}
+
+        model = report.metadata.model or ""
+        if "claude" in model.lower():
+            provider = "claude"
+        elif "gpt" in model.lower() or "openai" in model.lower():
+            provider = "openai"
+        elif "gemini" in model.lower():
+            provider = "gemini"
+        else:
+            provider = "—"
+
+        depth = report.metadata.depth.value if hasattr(report.metadata.depth, "value") else str(report.metadata.depth)
+        ts = report.metadata.generated_at.isoformat() if report.metadata.generated_at else ""
+
         return {
             "metadata": self._metadata_to_dict(report.metadata),
             "scores": self._scores_to_dict(report.scores),
-            "file_structure": self._file_structure_to_dict(report.summary, per_file_loc or {}),
-            "findings": [self._finding_to_dict(f) for f in report.recommendations],
+            "file_structure": self._file_structure_to_dict(report.summary, per_file_loc or {}, file_imports or {}),
+            "findings": findings_list,
+            "findings_summary": findings_summary,
             "practice_detection": self._practice_detection_to_dict(report.practice_detection),
             "blocking_findings": [
                 r.id for r in report.recommendations
                 if r.severity.value in ("Critical", "High")
             ],
-            "generated_at": report.metadata.generated_at.isoformat()
-                if report.metadata.generated_at else None,
+            "generated_at": ts,
+            # Flat keys consumed directly by the Streamlit UI
+            "repo_path": repo_path,
+            "llm_model": model,
+            "llm_provider": provider,
+            "analysis_depth": depth,
+            "analysis_timestamp": ts,
         }
 
     def _metadata_to_dict(self, metadata: Any) -> Dict[str, Any]:
@@ -117,25 +155,24 @@ class AnalysisExporter:
         }
 
     def _file_structure_to_dict(
-        self, summary: Any, per_file_loc: Optional[Dict[str, int]] = None
+        self,
+        summary: Any,
+        per_file_loc: Optional[Dict[str, int]] = None,
+        file_imports: Optional[Dict[str, list]] = None,
     ) -> Dict[str, Any]:
         """
         Build file structure summary from report summary.
 
-        Args:
-            summary: Summary object from report
-            per_file_loc: {relative_path: loc} collected during analysis
-
-        Returns:
-            Dictionary with file information. ``files`` is always a
-            ``{path: loc}`` dict so the dashboard graph can build nodes.
+        ``files``   — {path: loc} dict for graph nodes.
+        ``imports`` — {source_path: [target_path, ...]} for graph edges.
         """
         if summary is None:
-            return {"total_files": 0, "files": {}}
+            return {"total_files": 0, "files": {}, "imports": {}}
 
         return {
             "total_files": getattr(summary, "file_count", 0) or 0,
             "files": per_file_loc if per_file_loc else {},
+            "imports": file_imports if file_imports else {},
         }
 
     def _finding_to_dict(self, finding: Recommendation) -> Dict[str, Any]:

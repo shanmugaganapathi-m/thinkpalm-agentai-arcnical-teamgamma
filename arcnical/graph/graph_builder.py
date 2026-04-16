@@ -263,7 +263,7 @@ class DependencyGraphBuilder:
         net.toggle_physics(True)
         
         # Save HTML
-        net.show(output_path)
+        net.write_html(output_path)
         
         return output_path
 

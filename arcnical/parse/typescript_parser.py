@@ -9,7 +9,13 @@ from pathlib import Path
 
 try:
     from tree_sitter import Language, Parser
-    from tree_sitter_typescript import language as typescript_language
+    import tree_sitter_typescript as _ts_mod
+    # Support both old API (language()) and new API (language_typescript())
+    if hasattr(_ts_mod, 'language_typescript'):
+        def typescript_language():
+            return _ts_mod.language_typescript()
+    else:
+        from tree_sitter_typescript import language as typescript_language
     TREE_SITTER_AVAILABLE = True
 except ImportError:
     TREE_SITTER_AVAILABLE = False
