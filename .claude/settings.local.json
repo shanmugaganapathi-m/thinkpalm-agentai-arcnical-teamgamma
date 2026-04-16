@@ -28,7 +28,10 @@
       "Bash(PYTHONUTF8=1 python -m pytest tests/unit/test_metrics.py::TestComplexityCalculator::test_calculate_file_complexity -v)",
       "Bash(PYTHONIOENCODING=utf-8 python -m arcnical analyze ./test_repo --depth standard --llm-provider claude)",
       "Bash(git:*)",
-      "Bash(PYTHONIOENCODING=utf-8 python -m arcnical analyze .arcnical/clones/vinta_awesome-python --depth quick)"
+      "Bash(PYTHONIOENCODING=utf-8 python -m arcnical analyze .arcnical/clones/vinta_awesome-python --depth quick)",
+      "Bash(PYTHONUTF8=1 PYTHONIOENCODING=utf-8 python -m arcnical analyze .arcnical/clones/Arcnical_arcnical --depth quick)",
+      "Bash(PYTHONUTF8=1 PYTHONIOENCODING=utf-8 python -m arcnical analyze .arcnical/clones/vinta_awesome-python --depth quick)",
+      "Bash(PYTHONUTF8=1 PYTHONIOENCODING=utf-8 python -m arcnical analyze .arcnical/clones/sibisiddharth8_VisionSoC --depth quick)"
     ]
   }
 }

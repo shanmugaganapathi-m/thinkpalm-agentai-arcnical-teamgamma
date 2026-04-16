@@ -147,7 +147,10 @@ GLOBAL_CSS = f"""
 }}
 
 /* ── HIDE DEFAULT STREAMLIT CHROME ── */
-#MainMenu, footer, header {{visibility: hidden;}}
+/* NOTE: Do not hide the whole header — Streamlit renders the sidebar OPEN button there after collapse. */
+#MainMenu, footer {{visibility: hidden;}}
+header {{visibility: visible !important; background: transparent !important;}}
+.stAppDeployButton{{display: none !important;}}
 [data-testid="stDecoration"] {{display: none;}}
 
 /* ── SIDEBAR COLLAPSE BUTTON ── */
@@ -164,12 +167,34 @@ GLOBAL_CSS = f"""
   justify-content: center !important;
   width: 2rem !important;
   height: 2rem !important;
-  background: rgba(255,255,255,0.08) !important;
-  border: 1px solid rgba(255,255,255,0.18) !important;
+  background: rgba(255,255,255,0.3) !important;
+  border: 1px solid rgba(255,255,255,0.3) !important;
   border-radius: var(--radius-sm) !important;
   cursor: pointer !important;
+  color: white !important;
   transition: border-color 0.15s, background 0.15s !important;
 }}
+
+[data-testid="stExpandSidebarButton"] {{
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: fixed !important;
+  top: 0.5rem !important;
+  left: 1rem !important;
+  z-index: 9999999 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 2rem !important;
+  height: 2rem !important;
+  background: rgba(255,255,255,0.3) !important;
+  border: 1px solid rgba(255,255,255,0.3) !important;
+  border-radius: var(--radius-sm) !important;
+  cursor: pointer !important;
+  color: white !important;
+  transition: border-color 0.15s, background 0.15s !important;
+}}
+
 [data-testid="stSidebarCollapseButton"]:hover {{
   background: rgba(124,92,252,0.25) !important;
   border-color: var(--accent-primary) !important;
@@ -1621,7 +1646,22 @@ def render_findings(data: dict):
     st.markdown('<div class="page-title">Findings</div>', unsafe_allow_html=True)
 
     findings = data.get("findings", [])
-    summary = data.get("findings_summary", {})
+    # findings_summary may be absent in real output — compute from findings list
+    _raw_summary = data.get("findings_summary", {})
+    if _raw_summary:
+        summary = _raw_summary
+    else:
+        _counts: dict = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0}
+        for _f in findings:
+            _counts[((_f.get("severity") or "LOW").upper())] = _counts.get(
+                (_f.get("severity") or "LOW").upper(), 0) + 1
+        summary = {
+            "critical": _counts["CRITICAL"],
+            "high":     _counts["HIGH"],
+            "medium":   _counts["MEDIUM"],
+            "low":      _counts["LOW"],
+            "total":    len(findings),
+        }
 
     # ── Summary chips (HTML → .finding-count-chip) ──
     chips_html = f"""
@@ -1651,10 +1691,17 @@ def render_findings(data: dict):
     # ── Findings accordion (HTML → .acc-item) ──
     # Using st.expander per finding; styled via CSS overrides
     for finding in findings:
-        sev = finding["severity"]
+        sev = (finding.get("severity") or "LOW").upper()
         sev_color = SEV_COLOR.get(sev, COLORS["text_muted"])
         verified_color = COLORS["accent_secondary"] if finding.get("verified") else COLORS["text_muted"]
         verified_label = "True ✓" if finding.get("verified") else "False"
+
+        # 'file' / 'line' may be top-level (demo data) or inside evidence.references (real output)
+        refs = (finding.get("evidence") or {}).get("references") or []
+        file_val = finding.get("file") or (refs[0].get("file") if refs else None) or "—"
+        line_val = finding.get("line") or (refs[0].get("line") if refs else None) or "—"
+        layer_val = finding.get("layer") or "—"
+        rationale_val = finding.get("rationale") or "—"
 
         header_label = (
             f"{'🔴' if sev=='CRITICAL' else '🟠' if sev=='HIGH' else '🟣' if sev=='MEDIUM' else '🟢'} "
@@ -1671,7 +1718,7 @@ def render_findings(data: dict):
                 </div>
                 <div class="acc-detail-group">
                   <div class="acc-detail-key">Layer</div>
-                  <div class="acc-detail-val">{finding['layer']}</div>
+                  <div class="acc-detail-val">{layer_val}</div>
                 </div>
                 <div class="acc-detail-group">
                   <div class="acc-detail-key">Severity</div>
@@ -1683,14 +1730,14 @@ def render_findings(data: dict):
                 </div>
                 <div class="acc-detail-group">
                   <div class="acc-detail-key">File</div>
-                  <div class="acc-detail-val">{finding['file']}</div>
+                  <div class="acc-detail-val">{file_val}</div>
                 </div>
                 <div class="acc-detail-group">
                   <div class="acc-detail-key">Line</div>
-                  <div class="acc-detail-val">{finding['line']}</div>
+                  <div class="acc-detail-val">{line_val}</div>
                 </div>
               </div>
-              <div class="acc-rationale">{finding['rationale']}</div>
+              <div class="acc-rationale">{rationale_val}</div>
             </div>
             """
             st.markdown(detail_html, unsafe_allow_html=True)
@@ -1742,9 +1789,9 @@ def render_about():
 
     with col2:
         team_cards = [
-            ("A", "Engineer A", "Backend · Qualification → Review Agent",
+            ("S", "Shanmuga Ganapathi", "Backend · Qualification → Review Agent",
              "linear-gradient(135deg,#7c5cfc,#a78bfa)"),
-            ("B", "Engineer B", "Surface · CLI · Streamlit · Evaluation",
+            ("J", "Jisha Pappachan", "Surface · CLI · Streamlit · Evaluation",
              "linear-gradient(135deg,#00d4aa,#34d399)"),
         ]
         cards_html = "".join(
@@ -1921,20 +1968,18 @@ def main():
             st.error("⚠ Please enter a repository path.")
         else:
             with st.spinner("Running analysis…"):
-                try:
-                    from orchestrator import run_analysis
-                    result = run_analysis(
-                        repo_path=repo,
-                        llm_provider=config["provider"],
-                        llm_model=config["model"],
-                        depth=config["depth"],
-                    )
+                from arcnical.cli_bridge import CLIBridge
+                success, message, exec_time, result = CLIBridge.execute_analysis(
+                    repo_path=repo,
+                    depth=config["depth"],
+                    provider=config["provider"],
+                )
+                if success and result:
                     st.session_state.analysis_data = result
                     data = result
-                    st.success("✓ Analysis complete.")
-                except ImportError:
-                    # Orchestrator not available in demo mode
-                    st.info("Demo mode: orchestrator.py not found. Showing sample data.")
+                    st.success(message)
+                else:
+                    st.error(message)
 
     # ── Header bar (logo + export row above tabs) ──
     header_left, header_right = st.columns([8, 2])

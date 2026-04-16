@@ -114,9 +114,12 @@ class CLIBridge:
             if api_key and depth == "standard":
                 cmd.extend(["--llm-api-key", api_key])
 
-            # Force UTF-8 so Windows cp1252 doesn't choke on emoji in rich output
+            # Force UTF-8 mode so Windows cp1252 doesn't choke on emoji in rich output.
+            # PYTHONUTF8=1 enables PEP 540 UTF-8 mode globally (sys.stdout/stderr use utf-8
+            # before rich.Console initialises at import time).
             env = os.environ.copy()
             env["PYTHONIOENCODING"] = "utf-8"
+            env["PYTHONUTF8"] = "1"
 
             result = subprocess.run(
                 cmd,
@@ -140,8 +143,11 @@ class CLIBridge:
                     message = "⚠️ Analysis ran but JSON not found"
                     return False, message, execution_time, {}
             else:
-                error_msg = result.stderr or result.stdout
-                message = f"❌ Analysis failed: {error_msg[:500]}"
+                # Show the last 1000 chars of stderr — log lines fill the front,
+                # the actual exception is always at the tail.
+                error_msg = (result.stderr or result.stdout).strip()
+                tail = error_msg[-1000:] if len(error_msg) > 1000 else error_msg
+                message = f"❌ Analysis failed:\n{tail}"
                 return False, message, execution_time, {}
 
         except subprocess.TimeoutExpired:
