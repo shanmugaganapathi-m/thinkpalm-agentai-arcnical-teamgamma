@@ -320,7 +320,9 @@ MIT
 
 ## Authors
 
-Arcnical Team
+Shanmuga Ganapathi (Engineer A) drives the backend architecture and core intelligence. He built the Pydantic schema framework, tree-sitter parsers for Python and TypeScript/JavaScript, the networkx knowledge graph engine, multi-LLM provider abstraction (Claude, OpenAI, Gemini), and the CLI integration layer. His focus is on extracting, analyzing, and connecting code patterns at scale—turning raw source trees into structured, queryable intelligence.
+
+Jisha Papachan (Engineer B) owns the visual layer and user experience. She designed and built the Streamlit interactive dashboard with real-time health scoring, the PyVis force-directed dependency graph visualization, the self-contained HTML prototype with multi-page navigation, and the Markdown/JSON report formatters. Her work ensures every finding from the backend surfaces clearly and actionably for developers and architects.
 
 ---
 
