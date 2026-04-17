@@ -13,6 +13,15 @@ Prove that a tool combining **deterministic static analysis** with a **retrieval
 ### Youtube Demo link
 https://youtu.be/aQIDmAAN62Q
 
+### Docs
+
+In the Docs/ADR folder the below files available:
+
+ARCNICAL_ARCHITECTURE_DECISION_DOCUMENT.pdf
+arcnical_architecture.html
+arcnical_architecture.svg
+arcnical_prototype.html
+
 ### Prerequisites
 
 - Python 3.11 or 3.12 (Python 3.13 is supported but may show deprecation warnings from dependencies)
