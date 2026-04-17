@@ -1,0 +1,2056 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arcnical — Architecture Needs Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-base: #0a0c10;
+  --bg-surface: #0f1218;
+  --bg-card: #141820;
+  --bg-card-hover: #1a2030;
+  --bg-sidebar: #0c0e14;
+  --border: #1e2535;
+  --border-subtle: #151c28;
+  --accent-primary: #7c5cfc;
+  --accent-secondary: #00d4aa;
+  --accent-amber: #f5a623;
+  --accent-rose: #f54b6a;
+  --text-primary: #e8eaf2;
+  --text-secondary: #8892a4;
+  --text-muted: #4a5568;
+  --critical: #f54b6a;
+  --high: #f5a623;
+  --medium: #7c5cfc;
+  --low: #00d4aa;
+  --font-display: 'Syne', sans-serif;
+  --font-body: 'IBM Plex Sans', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --shadow-card: 0 4px 24px rgba(0,0,0,0.4);
+  --shadow-glow: 0 0 40px rgba(124,92,252,0.08);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.6;
+  overflow: hidden;
+}
+
+/* ── LAYOUT ── */
+.app-shell {
+  display: grid;
+  grid-template-rows: 52px 1fr 80px;
+  grid-template-columns: 240px 1fr;
+  height: 100vh;
+  background: var(--bg-base);
+}
+
+/* ── HEADER ── */
+header {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  gap: 0;
+  position: relative;
+  z-index: 100;
+}
+
+.logo-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-right: 40px;
+  min-width: 180px;
+}
+
+.logo-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, var(--accent-primary), var(--accent-secondary), var(--accent-primary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  color: white;
+  font-family: var(--font-display);
+  position: relative;
+}
+
+.logo-icon::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border-radius: 50%;
+  background: var(--bg-surface);
+}
+
+.logo-icon span { position: relative; z-index: 1; }
+
+.logo-text {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.3px;
+}
+
+.logo-tag {
+  font-size: 9px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+}
+
+.nav-tab {
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: all 0.18s ease;
+  border: 1px solid transparent;
+  font-family: var(--font-body);
+  background: none;
+  white-space: nowrap;
+}
+
+.nav-tab:hover { color: var(--text-primary); background: var(--bg-card); }
+.nav-tab.active {
+  color: white;
+  background: var(--accent-primary);
+  border-color: rgba(124,92,252,0.3);
+}
+
+.header-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+
+.btn-export {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.btn-export-main {
+  padding: 6px 14px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  font-family: var(--font-body);
+  transition: background 0.15s;
+}
+
+.btn-export-main:hover { background: var(--bg-card-hover); }
+
+.btn-export-arrow {
+  padding: 6px 8px;
+  background: var(--accent-primary);
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 10px;
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.sidebar-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  font-family: var(--font-display);
+}
+
+.menu-icon { font-size: 14px; cursor: pointer; color: var(--text-secondary); }
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.search-input {
+  flex: 1;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-family: var(--font-body);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.search-input:focus { border-color: var(--accent-primary); }
+.search-input::placeholder { color: var(--text-muted); }
+
+.sidebar-events {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.sidebar-events::-webkit-scrollbar { width: 3px; }
+.sidebar-events::-webkit-scrollbar-track { background: transparent; }
+.sidebar-events::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.event-card {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  cursor: pointer;
+  transition: background 0.15s;
+  position: relative;
+}
+
+.event-card:hover { background: var(--bg-card); }
+
+.event-card.completed::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--accent-secondary);
+}
+
+.event-card.warning::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--accent-amber);
+}
+
+.event-card.error::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--critical);
+}
+
+.event-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.event-sub {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.event-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.badge-ok { background: rgba(0,212,170,0.12); color: var(--accent-secondary); }
+.badge-warn { background: rgba(245,166,35,0.12); color: var(--accent-amber); }
+.badge-err { background: rgba(245,75,106,0.12); color: var(--critical); }
+
+/* ── MAIN CONTENT ── */
+.main-content {
+  overflow-y: auto;
+  background: var(--bg-base);
+  position: relative;
+}
+
+.main-content::-webkit-scrollbar { width: 4px; }
+.main-content::-webkit-scrollbar-track { background: transparent; }
+.main-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* ── PAGE ── */
+.page { display: none; padding: 24px; animation: fadeIn 0.25s ease; }
+.page.active { display: block; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.page-title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 20px;
+  letter-spacing: -0.3px;
+}
+
+/* ── SEVERITY GRID ── */
+.severity-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.sev-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 18px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.18s, border-color 0.18s;
+  cursor: default;
+}
+
+.sev-card:hover { transform: translateY(-1px); }
+.sev-card.critical { border-left: 3px solid var(--critical); }
+.sev-card.critical:hover { border-color: var(--critical); }
+.sev-card.high { border-left: 3px solid var(--high); }
+.sev-card.high:hover { border-color: var(--high); }
+.sev-card.medium { border-left: 3px solid var(--medium); }
+.sev-card.medium:hover { border-color: var(--medium); }
+.sev-card.low { border-left: 3px solid var(--low); }
+.sev-card.low:hover { border-color: var(--low); }
+
+.sev-label {
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.sev-card.critical .sev-label { color: var(--critical); }
+.sev-card.high .sev-label { color: var(--high); }
+.sev-card.medium .sev-label { color: var(--medium); }
+.sev-card.low .sev-label { color: var(--low); }
+
+.sev-meta { font-size: 11px; color: var(--text-muted); }
+.sev-desc { font-size: 10.5px; color: var(--text-muted); margin-top: 2px; }
+
+.sev-count {
+  font-family: var(--font-display);
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -2px;
+}
+
+.sev-card.critical .sev-count { color: var(--critical); }
+.sev-card.high .sev-count { color: var(--high); }
+.sev-card.medium .sev-count { color: var(--medium); }
+.sev-card.low .sev-count { color: var(--low); }
+
+/* ── CONFIG + SCORES ROW ── */
+.config-scores-row {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.config-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+}
+
+.panel-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  font-family: var(--font-display);
+}
+
+.config-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.config-row:last-child { border-bottom: none; }
+
+.config-key { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); }
+.config-val {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  text-align: right;
+}
+
+.config-val.ready { color: var(--accent-secondary); }
+
+.scores-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.scores-header {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.score-item { text-align: center; }
+.score-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  font-family: var(--font-display);
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.score-ring-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.score-ring {
+  width: 54px;
+  height: 54px;
+  position: relative;
+}
+
+.score-ring svg { transform: rotate(-90deg); }
+
+.score-ring-val {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* ── FOOTER ── */
+footer {
+  grid-column: 1 / -1;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border);
+  padding: 10px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.footer-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 8px;
+}
+
+.footer-tab {
+  padding: 4px 12px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  transition: color 0.15s;
+  border: none;
+  background: none;
+  font-family: var(--font-body);
+  white-space: nowrap;
+}
+
+.footer-tab.active { color: var(--text-primary); border-bottom: 2px solid var(--accent-primary); }
+.footer-tab:hover { color: var(--text-secondary); }
+
+.footer-tabs-controls {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.footer-input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.repo-input {
+  flex: 1;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 7px 12px;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-family: var(--font-mono);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.repo-input:focus { border-color: var(--accent-primary); }
+.repo-input::placeholder { color: var(--text-muted); }
+
+.btn-analyze {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 18px;
+  background: var(--accent-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: opacity 0.15s, transform 0.1s;
+  white-space: nowrap;
+}
+
+.btn-analyze:hover { opacity: 0.9; transform: translateY(-1px); }
+.btn-analyze:active { transform: translateY(0); }
+
+.footer-controls-row { display: none; }
+
+.provider-btn-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border: 1px solid var(--accent-primary);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.provider-main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background: var(--accent-primary);
+  color: white;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  font-family: var(--font-body);
+  white-space: nowrap;
+}
+
+.provider-arrow {
+  padding: 5px 8px;
+  background: rgba(124,92,252,0.3);
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 9px;
+  position: relative;
+}
+
+.provider-dropdown {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 6px;
+  min-width: 160px;
+  display: none;
+  z-index: 200;
+  box-shadow: var(--shadow-card);
+}
+
+.provider-dropdown.open { display: block; }
+
+.provider-option {
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-secondary);
+  transition: background 0.12s, color 0.12s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.provider-option:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+.provider-option.selected { color: var(--accent-primary); }
+
+.provider-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.depth-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11.5px;
+}
+
+.depth-label {
+  color: var(--text-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+
+.radio-option input[type="radio"] { accent-color: var(--accent-primary); cursor: pointer; }
+.radio-option.checked { color: var(--text-primary); }
+
+.depth-hint {
+  font-size: 9.5px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  margin-left: 4px;
+}
+
+/* ── GRAPH PAGE ── */
+#graph-canvas {
+  width: 100%;
+  height: 400px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.graph-controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  transition: all 0.15s;
+  font-family: var(--font-body);
+}
+
+.chip.active, .chip:hover { background: var(--accent-primary); color: white; border-color: var(--accent-primary); }
+.chip.secondary { border-color: var(--accent-secondary); }
+.chip.secondary.active, .chip.secondary:hover { background: var(--accent-secondary); color: var(--bg-base); border-color: var(--accent-secondary); }
+
+.graph-legend {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  font-size: 11px;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+/* ── METRICS PAGE ── */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.metric-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+}
+
+.metric-card-title {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  font-family: var(--font-display);
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.metric-value {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -1px;
+  margin-bottom: 4px;
+}
+
+.metric-sub { font-size: 11px; color: var(--text-muted); }
+
+.metric-bar-wrap {
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin-top: 10px;
+  overflow: hidden;
+}
+
+.metric-bar {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.6s ease;
+}
+
+.bar-purple { background: var(--accent-primary); }
+.bar-teal { background: var(--accent-secondary); }
+.bar-amber { background: var(--accent-amber); }
+.bar-rose { background: var(--critical); }
+
+.table-wrap {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.data-table th {
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-display);
+}
+
+.data-table td {
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:hover td { background: var(--bg-card-hover); color: var(--text-primary); }
+
+.badge-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.pill-critical { background: rgba(245,75,106,0.12); color: var(--critical); }
+.pill-high { background: rgba(245,166,35,0.12); color: var(--high); }
+.pill-medium { background: rgba(124,92,252,0.12); color: var(--medium); }
+.pill-low { background: rgba(0,212,170,0.12); color: var(--low); }
+.pill-ok { background: rgba(0,212,170,0.12); color: var(--low); }
+
+/* ── FILES PAGE ── */
+.files-tree {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.12s;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+}
+
+.file-item:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+
+.file-item.dir { color: var(--accent-secondary); font-weight: 500; }
+.file-item.dir .fi-icon { color: var(--accent-secondary); }
+
+.fi-icon { font-size: 12px; width: 16px; text-align: center; }
+.fi-name { flex: 1; }
+.fi-meta { font-size: 10.5px; color: var(--text-muted); text-align: right; }
+.fi-badge { font-size: 10px; }
+
+.file-indent { padding-left: 24px; }
+.file-indent-2 { padding-left: 48px; }
+
+/* ── FINDINGS PAGE ── */
+.findings-summary {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.finding-count-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.fcc-critical { border-color: var(--critical); color: var(--critical); background: rgba(245,75,106,0.06); }
+.fcc-high { border-color: var(--high); color: var(--high); background: rgba(245,166,35,0.06); }
+.fcc-medium { border-color: var(--medium); color: var(--medium); background: rgba(124,92,252,0.06); }
+.fcc-low { border-color: var(--low); color: var(--low); background: rgba(0,212,170,0.06); }
+.fcc-total { border-color: var(--border); color: var(--text-secondary); background: var(--bg-card); }
+
+.finding-count-chip:hover { filter: brightness(1.2); }
+
+.accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.acc-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+
+.acc-item:hover { border-color: rgba(124,92,252,0.3); }
+
+.acc-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.acc-severity-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.acc-title {
+  flex: 1;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.acc-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.acc-chevron {
+  color: var(--text-muted);
+  transition: transform 0.2s;
+  font-size: 10px;
+}
+
+.acc-item.open .acc-chevron { transform: rotate(180deg); }
+
+.acc-body {
+  display: none;
+  padding: 16px;
+  border-top: 1px solid var(--border-subtle);
+  animation: accOpen 0.2s ease;
+}
+
+@keyframes accOpen {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.acc-item.open .acc-body { display: block; }
+
+.acc-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.acc-detail-group {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+}
+
+.acc-detail-key {
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  font-family: var(--font-display);
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+
+.acc-detail-val {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+.acc-rationale {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  padding: 10px;
+  background: var(--bg-surface);
+  border-radius: var(--radius-sm);
+  border-left: 2px solid var(--accent-primary);
+}
+
+/* ── ABOUT PAGE ── */
+.about-hero {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.about-hero::before {
+  content: '';
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(124,92,252,0.12), transparent 70%);
+}
+
+.about-hero-title {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  margin-bottom: 6px;
+}
+
+.about-hero-tag {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 14px;
+}
+
+.about-hero-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  max-width: 640px;
+}
+
+.about-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.about-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 20px;
+}
+
+.about-section-title {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.about-section-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: rgba(124,92,252,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+}
+
+.stack-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.stack-item:last-child { border-bottom: none; }
+.stack-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent-primary); flex-shrink: 0; }
+
+.team-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  background: var(--bg-surface);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  margin-bottom: 8px;
+}
+
+.team-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+}
+
+.avatar-a { background: linear-gradient(135deg, var(--accent-primary), #a78bfa); }
+.avatar-b { background: linear-gradient(135deg, var(--accent-secondary), #34d399); }
+
+.team-name { font-size: 12.5px; font-weight: 600; color: var(--text-primary); }
+.team-role { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); }
+
+/* ── SCROLLBAR FOR MAIN ── */
+.main-content::-webkit-scrollbar { width: 4px; }
+
+/* ── TOOLTIP ── */
+.tooltip {
+  position: absolute;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  font-size: 11px;
+  color: var(--text-primary);
+  pointer-events: none;
+  z-index: 1000;
+  white-space: nowrap;
+  display: none;
+  font-family: var(--font-mono);
+  box-shadow: var(--shadow-card);
+}
+
+/* ── SECTION HEADER ── */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.section-action {
+  font-size: 11px;
+  color: var(--accent-primary);
+  cursor: pointer;
+  font-family: var(--font-mono);
+}
+
+.section-action:hover { text-decoration: underline; }
+
+/* ── DIVIDER ── */
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 16px 0;
+}
+
+/* ── PROVIDER WRAP RELATIVE ── */
+.provider-rel { position: relative; }
+
+/* ── GRAPH SVG ── */
+#graph-svg { width: 100%; height: 100%; }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  bottom: 110px;
+  right: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--accent-secondary);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  font-size: 12px;
+  color: var(--accent-secondary);
+  font-family: var(--font-mono);
+  z-index: 9999;
+  box-shadow: var(--shadow-card);
+  transform: translateY(20px);
+  opacity: 0;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toast.show { transform: translateY(0); opacity: 1; }
+
+/* ── METRIC CHART BARS ── */
+.hbar-group { margin-bottom: 10px; }
+.hbar-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+  font-family: var(--font-mono);
+}
+
+.hbar-track {
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.hbar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── FILES STATS ROW ── */
+.files-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.file-stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  text-align: center;
+}
+
+.fsc-val {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+}
+
+.fsc-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 3px; }
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo-group">
+      <div class="logo-icon"><span>A</span></div>
+      <div>
+        <div class="logo-text">Arcnical</div>
+        <div class="logo-tag">Architecture Needs Intelligence</div>
+      </div>
+    </div>
+    <nav>
+      <button class="nav-tab active" onclick="switchPage('overview', this)">Overview</button>
+      <button class="nav-tab" onclick="switchPage('graph', this)">Graph</button>
+      <button class="nav-tab" onclick="switchPage('metrics', this)">Metrics</button>
+      <button class="nav-tab" onclick="switchPage('files', this)">Files</button>
+      <button class="nav-tab" onclick="switchPage('findings', this)">Findings</button>
+      <button class="nav-tab" onclick="switchPage('about', this)">About</button>
+    </nav>
+    <div class="header-actions">
+      <div class="btn-export">
+        <button class="btn-export-main" onclick="handleExport()">⬇ Export</button>
+        <button class="btn-export-arrow" onclick="toggleExportMenu()">▾</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <span class="menu-icon">☰</span>
+      <span class="sidebar-title">Live Status</span>
+    </div>
+    <div class="search-bar">
+      <input class="search-input" type="text" placeholder="Search events…" oninput="filterEvents(this.value)">
+      <span style="color:var(--text-muted);font-size:12px;cursor:pointer;">⌕</span>
+    </div>
+    <div class="sidebar-events" id="sidebar-events">
+      <!-- Populated by JS -->
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+
+    <!-- OVERVIEW PAGE -->
+    <section id="page-overview" class="page active">
+      <div class="page-title">Analysis Overview</div>
+      <div class="severity-grid">
+        <div class="sev-card critical">
+          <div>
+            <div class="sev-label">Critical</div>
+            <div class="sev-meta">Circular Imports</div>
+            <div class="sev-desc">Requires immediate attention</div>
+          </div>
+          <div class="sev-count">3</div>
+        </div>
+        <div class="sev-card high">
+          <div>
+            <div class="sev-label">High</div>
+            <div class="sev-meta">God Classes Detected</div>
+            <div class="sev-desc">Significant risk to maintainability</div>
+          </div>
+          <div class="sev-count">1</div>
+        </div>
+        <div class="sev-card medium">
+          <div>
+            <div class="sev-label">Medium</div>
+            <div class="sev-meta">High Complexity Modules</div>
+            <div class="sev-desc">Refactoring recommended</div>
+          </div>
+          <div class="sev-count">12</div>
+        </div>
+        <div class="sev-card low">
+          <div>
+            <div class="sev-label">Low</div>
+            <div class="sev-meta">Style & Convention</div>
+            <div class="sev-desc">Minor improvements available</div>
+          </div>
+          <div class="sev-count">0</div>
+        </div>
+      </div>
+
+      <div class="config-scores-row">
+        <div class="config-panel">
+          <div class="panel-label">Configuration</div>
+          <div class="config-row"><span class="config-key">Status</span><span class="config-val ready">Ready</span></div>
+          <div class="config-row"><span class="config-key">Model</span><span class="config-val">claude-sonnet-4-6</span></div>
+          <div class="config-row"><span class="config-key">Provider</span><span class="config-val">Claude</span></div>
+          <div class="config-row"><span class="config-key">Depth</span><span class="config-val">Standard</span></div>
+          <div class="config-row"><span class="config-key">Last Run</span><span class="config-val">2026-04-14 16:41</span></div>
+          <div class="config-row"><span class="config-key">Findings</span><span class="config-val">16</span></div>
+          <div class="config-row"><span class="config-key">Files Analyzed</span><span class="config-val">28</span></div>
+          <div class="config-row"><span class="config-key">Repo</span><span class="config-val">arcnical/arcnical</span></div>
+        </div>
+
+        <div class="scores-panel">
+          <div class="panel-label">Architectural Health Scores</div>
+          <div class="scores-header">
+            <div class="score-item">
+              <div class="score-label">Overall</div>
+              <div class="score-ring-wrap">
+                <div class="score-ring">
+                  <svg viewBox="0 0 54 54" width="54" height="54">
+                    <circle cx="27" cy="27" r="22" fill="none" stroke="#1e2535" stroke-width="4"/>
+                    <circle cx="27" cy="27" r="22" fill="none" stroke="#7c5cfc" stroke-width="4" stroke-dasharray="138.2" stroke-dashoffset="23.5" stroke-linecap="round"/>
+                  </svg>
+                  <div class="score-ring-val" style="color:var(--accent-primary)">85%</div>
+                </div>
+              </div>
+            </div>
+            <div class="score-item">
+              <div class="score-label">Maintainability</div>
+              <div class="score-ring-wrap">
+                <div class="score-ring">
+                  <svg viewBox="0 0 54 54" width="54" height="54">
+                    <circle cx="27" cy="27" r="22" fill="none" stroke="#1e2535" stroke-width="4"/>
+                    <circle cx="27" cy="27" r="22" fill="none" stroke="#f5a623" stroke-width="4" stroke-dasharray="138.2" stroke-dashoffset="90" stroke-linecap="round"/>
+                  </svg>
+                  <div class="score-ring-val" style="color:var(--high)">35%</div>
+                </div>
+              </div>
+            </div>
+            <div class="score-item">
+              <div class="score-label">Structure</div>
+              <div class="score-ring-wrap">
+                <div class="score-ring">
+                  <svg viewBox="0 0 54 54" width="54" height="54">
+                    <circle cx="27" cy="27" r="22" fill="none" stroke="#1e2535" stroke-width="4"/>
+                    <circle cx="27" cy="27" r="22" fill="none" stroke="#00d4aa" stroke-width="4" stroke-dasharray="138.2" stroke-dashoffset="13.8" stroke-linecap="round"/>
+                  </svg>
+                  <div class="score-ring-val" style="color:var(--accent-secondary)">90%</div>
+                </div>
+              </div>
+            </div>
+            <div class="score-item">
+              <div class="score-label">Security</div>
+              <div class="score-ring-wrap">
+                <div class="score-ring">
+                  <svg viewBox="0 0 54 54" width="54" height="54">
+                    <circle cx="27" cy="27" r="22" fill="none" stroke="#1e2535" stroke-width="4"/>
+                    <circle cx="27" cy="27" r="22" fill="none" stroke="#f54b6a" stroke-width="4" stroke-dasharray="138.2" stroke-dashoffset="117.5" stroke-linecap="round"/>
+                  </svg>
+                  <div class="score-ring-val" style="color:var(--critical)">15%</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="hbar-group">
+              <div class="hbar-label"><span>Overall Health</span><span>85%</span></div>
+              <div class="hbar-track"><div class="hbar-fill bar-purple" style="width:85%"></div></div>
+            </div>
+            <div class="hbar-group">
+              <div class="hbar-label"><span>Maintainability</span><span>35%</span></div>
+              <div class="hbar-track"><div class="hbar-fill bar-amber" style="width:35%"></div></div>
+            </div>
+            <div class="hbar-group">
+              <div class="hbar-label"><span>Structure Quality</span><span>90%</span></div>
+              <div class="hbar-track"><div class="hbar-fill bar-teal" style="width:90%"></div></div>
+            </div>
+            <div class="hbar-group">
+              <div class="hbar-label"><span>Security Score</span><span>15%</span></div>
+              <div class="hbar-track"><div class="hbar-fill bar-rose" style="width:15%"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- GRAPH PAGE -->
+    <section id="page-graph" class="page">
+      <div class="section-header">
+        <div class="page-title" style="margin-bottom:0">Dependency Graph</div>
+        <div style="display:flex;gap:6px">
+          <button class="chip active" onclick="setGraphFilter('all',this)">All Modules</button>
+          <button class="chip" onclick="setGraphFilter('circular',this)">Circular Deps</button>
+          <button class="chip secondary" onclick="setGraphFilter('hubs',this)">Hub Nodes</button>
+          <button class="chip" onclick="setGraphFilter('isolated',this)">Isolated</button>
+        </div>
+      </div>
+      <div id="graph-canvas">
+        <svg id="graph-svg"></svg>
+        <div id="graph-tooltip" class="tooltip"></div>
+      </div>
+      <div class="graph-legend">
+        <span class="legend-item"><span class="legend-dot" style="background:var(--accent-primary)"></span>Core Module</span>
+        <span class="legend-item"><span class="legend-dot" style="background:var(--accent-secondary)"></span>Utility</span>
+        <span class="legend-item"><span class="legend-dot" style="background:var(--critical)"></span>Circular Dep</span>
+        <span class="legend-item"><span class="legend-dot" style="background:var(--high)"></span>High Complexity</span>
+        <span class="legend-item"><span class="legend-dot" style="background:var(--text-muted)"></span>Low Usage</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--text-muted)">Hover nodes for details · Drag to explore</span>
+      </div>
+    </section>
+
+    <!-- METRICS PAGE -->
+    <section id="page-metrics" class="page">
+      <div class="page-title">Code Metrics</div>
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-card-title">Total Lines of Code</div>
+          <div class="metric-value">3,240</div>
+          <div class="metric-sub">across 28 Python modules</div>
+          <div class="metric-bar-wrap"><div class="metric-bar bar-purple" style="width:72%"></div></div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-card-title">Test Coverage</div>
+          <div class="metric-value">74.8%</div>
+          <div class="metric-sub">90+ tests passing</div>
+          <div class="metric-bar-wrap"><div class="metric-bar bar-teal" style="width:75%"></div></div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-card-title">Avg Cyclomatic Complexity</div>
+          <div class="metric-value">6.2</div>
+          <div class="metric-sub">Target: &lt; 10 per function</div>
+          <div class="metric-bar-wrap"><div class="metric-bar bar-amber" style="width:62%"></div></div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-card-title">Circular Dependencies</div>
+          <div class="metric-value" style="color:var(--critical)">3</div>
+          <div class="metric-sub">Detected in L2 analysis</div>
+          <div class="metric-bar-wrap"><div class="metric-bar bar-rose" style="width:30%"></div></div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-card-title">God Classes</div>
+          <div class="metric-value" style="color:var(--high)">1</div>
+          <div class="metric-sub">orchestrator.py (480 LOC)</div>
+          <div class="metric-bar-wrap"><div class="metric-bar bar-amber" style="width:10%"></div></div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-card-title">Avg File Size</div>
+          <div class="metric-value">115</div>
+          <div class="metric-sub">lines per module</div>
+          <div class="metric-bar-wrap"><div class="metric-bar bar-purple" style="width:45%"></div></div>
+        </div>
+      </div>
+
+      <div class="section-header">
+        <div class="section-title">Module Complexity Breakdown</div>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Module</th>
+              <th>LOC</th>
+              <th>Complexity</th>
+              <th>Functions</th>
+              <th>Classes</th>
+              <th>Dependencies</th>
+              <th>Risk</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>orchestrator.py</td><td>480</td><td>18.4</td><td>24</td><td>2</td><td>12</td><td><span class="badge-pill pill-critical">Critical</span></td></tr>
+            <tr><td>graph_builder.py</td><td>320</td><td>11.2</td><td>18</td><td>1</td><td>8</td><td><span class="badge-pill pill-high">High</span></td></tr>
+            <tr><td>parsers/python_parser.py</td><td>295</td><td>9.8</td><td>15</td><td>1</td><td>6</td><td><span class="badge-pill pill-medium">Medium</span></td></tr>
+            <tr><td>parsers/ts_parser.py</td><td>280</td><td>9.1</td><td>14</td><td>1</td><td>5</td><td><span class="badge-pill pill-medium">Medium</span></td></tr>
+            <tr><td>report/formatters.py</td><td>260</td><td>7.3</td><td>12</td><td>3</td><td>4</td><td><span class="badge-pill pill-low">Low</span></td></tr>
+            <tr><td>cli/main.py</td><td>240</td><td>6.9</td><td>10</td><td>0</td><td>7</td><td><span class="badge-pill pill-low">Low</span></td></tr>
+            <tr><td>schemas/models.py</td><td>220</td><td>4.2</td><td>8</td><td>14</td><td>2</td><td><span class="badge-pill pill-ok">OK</span></td></tr>
+            <tr><td>heuristics/detectors.py</td><td>210</td><td>8.6</td><td>16</td><td>6</td><td>5</td><td><span class="badge-pill pill-medium">Medium</span></td></tr>
+            <tr><td>llm/providers/claude.py</td><td>180</td><td>5.4</td><td>9</td><td>1</td><td>3</td><td><span class="badge-pill pill-low">Low</span></td></tr>
+            <tr><td>ui/sidebar_enhanced.py</td><td>165</td><td>4.8</td><td>11</td><td>0</td><td>4</td><td><span class="badge-pill pill-ok">OK</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- FILES PAGE -->
+    <section id="page-files" class="page">
+      <div class="page-title">File Explorer</div>
+      <div class="files-stats-row">
+        <div class="file-stat-card">
+          <div class="fsc-val">28</div>
+          <div class="fsc-label">Python Files</div>
+        </div>
+        <div class="file-stat-card">
+          <div class="fsc-val">3,240</div>
+          <div class="fsc-label">Total Lines</div>
+        </div>
+        <div class="file-stat-card">
+          <div class="fsc-val">4</div>
+          <div class="fsc-label">YAML Configs</div>
+        </div>
+        <div class="file-stat-card">
+          <div class="fsc-val">90+</div>
+          <div class="fsc-label">Test Cases</div>
+        </div>
+      </div>
+      <div class="section-header">
+        <div class="section-title">Repository Structure</div>
+        <span class="section-action" onclick="expandAllFiles()">Expand All</span>
+      </div>
+      <div class="files-tree" id="file-tree">
+        <div class="file-item dir" onclick="toggleDir(this)"><span class="fi-icon">▶</span><span class="fi-name">📁 arcnical/</span><span class="fi-meta">root</span></div>
+        <div class="file-children" style="display:none">
+          <div class="file-item file-indent dir" onclick="toggleDir(this)"><span class="fi-icon">▶</span><span class="fi-name">📁 src/arcnical/</span><span class="fi-meta">28 files</span></div>
+          <div class="file-children-inner" style="display:none">
+            <div class="file-item file-indent-2"><span class="fi-icon">🐍</span><span class="fi-name">orchestrator.py</span><span class="fi-meta">480 LOC</span><span class="fi-badge"><span class="badge-pill pill-critical">Critical</span></span></div>
+            <div class="file-item file-indent-2"><span class="fi-icon">🐍</span><span class="fi-name">graph_builder.py</span><span class="fi-meta">320 LOC</span><span class="fi-badge"><span class="badge-pill pill-high">High</span></span></div>
+            <div class="file-item file-indent-2 dir" onclick="toggleDir(this)"><span class="fi-icon">▶</span><span class="fi-name">📁 parsers/</span><span class="fi-meta">3 files</span></div>
+            <div class="file-children-inner2" style="display:none">
+              <div class="file-item" style="padding-left:72px"><span class="fi-icon">🐍</span><span class="fi-name">python_parser.py</span><span class="fi-meta">295 LOC</span></div>
+              <div class="file-item" style="padding-left:72px"><span class="fi-icon">🐍</span><span class="fi-name">ts_parser.py</span><span class="fi-meta">280 LOC</span></div>
+              <div class="file-item" style="padding-left:72px"><span class="fi-icon">🐍</span><span class="fi-name">__init__.py</span><span class="fi-meta">12 LOC</span></div>
+            </div>
+            <div class="file-item file-indent-2 dir" onclick="toggleDir(this)"><span class="fi-icon">▶</span><span class="fi-name">📁 schemas/</span><span class="fi-meta">4 files</span></div>
+            <div class="file-children-inner3" style="display:none">
+              <div class="file-item" style="padding-left:72px"><span class="fi-icon">🐍</span><span class="fi-name">models.py</span><span class="fi-meta">220 LOC</span><span class="fi-badge"><span class="badge-pill pill-ok">OK</span></span></div>
+              <div class="file-item" style="padding-left:72px"><span class="fi-icon">🐍</span><span class="fi-name">validators.py</span><span class="fi-meta">95 LOC</span></div>
+            </div>
+            <div class="file-item file-indent-2 dir" onclick="toggleDir(this)"><span class="fi-icon">▶</span><span class="fi-name">📁 llm/</span><span class="fi-meta">6 files</span></div>
+            <div class="file-children-inner4" style="display:none">
+              <div class="file-item" style="padding-left:72px"><span class="fi-icon">🐍</span><span class="fi-name">base_provider.py</span><span class="fi-meta">80 LOC</span></div>
+              <div class="file-item" style="padding-left:72px"><span class="fi-icon">🐍</span><span class="fi-name">claude_provider.py</span><span class="fi-meta">180 LOC</span></div>
+              <div class="file-item" style="padding-left:72px"><span class="fi-icon">🐍</span><span class="fi-name">openai_provider.py</span><span class="fi-meta">160 LOC</span></div>
+              <div class="file-item" style="padding-left:72px"><span class="fi-icon">🐍</span><span class="fi-name">gemini_provider.py</span><span class="fi-meta">150 LOC</span></div>
+              <div class="file-item" style="padding-left:72px"><span class="fi-icon">🐍</span><span class="fi-name">factory.py</span><span class="fi-meta">45 LOC</span></div>
+            </div>
+            <div class="file-item file-indent-2 dir" onclick="toggleDir(this)"><span class="fi-icon">▶</span><span class="fi-name">📁 report/</span><span class="fi-meta">3 files</span></div>
+            <div class="file-children-inner5" style="display:none">
+              <div class="file-item" style="padding-left:72px"><span class="fi-icon">🐍</span><span class="fi-name">formatters.py</span><span class="fi-meta">260 LOC</span></div>
+              <div class="file-item" style="padding-left:72px"><span class="fi-icon">🐍</span><span class="fi-name">health_score.py</span><span class="fi-meta">120 LOC</span></div>
+            </div>
+            <div class="file-item file-indent-2 dir" onclick="toggleDir(this)"><span class="fi-icon">▶</span><span class="fi-name">📁 ui/</span><span class="fi-meta">4 files</span></div>
+            <div class="file-children-inner6" style="display:none">
+              <div class="file-item" style="padding-left:72px"><span class="fi-icon">🐍</span><span class="fi-name">dashboard.py</span><span class="fi-meta">340 LOC</span></div>
+              <div class="file-item" style="padding-left:72px"><span class="fi-icon">🐍</span><span class="fi-name">sidebar_enhanced.py</span><span class="fi-meta">165 LOC</span></div>
+              <div class="file-item" style="padding-left:72px"><span class="fi-icon">🐍</span><span class="fi-name">graph_components.py</span><span class="fi-meta">180 LOC</span></div>
+              <div class="file-item" style="padding-left:72px"><span class="fi-icon">🐍</span><span class="fi-name">cli_bridge.py</span><span class="fi-meta">120 LOC</span></div>
+            </div>
+          </div>
+          <div class="file-item file-indent dir" onclick="toggleDir(this)"><span class="fi-icon">▶</span><span class="fi-name">📁 tests/</span><span class="fi-meta">90+ tests</span></div>
+          <div class="file-children-t" style="display:none">
+            <div class="file-item file-indent-2"><span class="fi-icon">🐍</span><span class="fi-name">test_parsers.py</span><span class="fi-meta">35 tests</span><span class="fi-badge"><span class="badge-pill pill-ok">Passing</span></span></div>
+            <div class="file-item file-indent-2"><span class="fi-icon">🐍</span><span class="fi-name">test_heuristics.py</span><span class="fi-meta">28 tests</span><span class="fi-badge"><span class="badge-pill pill-ok">Passing</span></span></div>
+            <div class="file-item file-indent-2"><span class="fi-icon">🐍</span><span class="fi-name">test_report.py</span><span class="fi-meta">20 tests</span><span class="fi-badge"><span class="badge-pill pill-ok">Passing</span></span></div>
+            <div class="file-item file-indent-2"><span class="fi-icon">🐍</span><span class="fi-name">test_llm.py</span><span class="fi-meta">7 tests</span><span class="fi-badge"><span class="badge-pill pill-ok">Passing</span></span></div>
+          </div>
+          <div class="file-item file-indent dir" onclick="toggleDir(this)"><span class="fi-icon">▶</span><span class="fi-name">📁 configs/</span><span class="fi-meta">4 YAML files</span></div>
+          <div class="file-children-c" style="display:none">
+            <div class="file-item file-indent-2"><span class="fi-icon">📄</span><span class="fi-name">layer1.yaml</span><span class="fi-meta">L1 Qualification</span></div>
+            <div class="file-item file-indent-2"><span class="fi-icon">📄</span><span class="fi-name">layer2.yaml</span><span class="fi-meta">L2 Heuristics</span></div>
+            <div class="file-item file-indent-2"><span class="fi-icon">📄</span><span class="fi-name">layer3.yaml</span><span class="fi-meta">L3 Security</span></div>
+            <div class="file-item file-indent-2"><span class="fi-icon">📄</span><span class="fi-name">layer4.yaml</span><span class="fi-meta">L4 LLM Review</span></div>
+          </div>
+          <div class="file-item file-indent"><span class="fi-icon">📄</span><span class="fi-name">pyproject.toml</span><span class="fi-meta">15+ deps</span></div>
+          <div class="file-item file-indent"><span class="fi-icon">📄</span><span class="fi-name">README.md</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FINDINGS PAGE -->
+    <section id="page-findings" class="page">
+      <div class="section-header">
+        <div class="page-title" style="margin-bottom:0">Findings <span style="font-size:14px;color:var(--text-muted);font-weight:400">(16 total)</span></div>
+      </div>
+      <div class="findings-summary">
+        <div class="finding-count-chip fcc-critical">● 3 Critical</div>
+        <div class="finding-count-chip fcc-high">● 1 High</div>
+        <div class="finding-count-chip fcc-medium">● 12 Medium</div>
+        <div class="finding-count-chip fcc-low">● 0 Low</div>
+        <div class="finding-count-chip fcc-total">16 Total</div>
+      </div>
+      <div class="accordion" id="findings-accordion">
+        <!-- Populated by JS -->
+      </div>
+    </section>
+
+    <!-- ABOUT PAGE -->
+    <section id="page-about" class="page">
+      <div class="about-hero">
+        <div class="about-hero-tag">v0.2.0 · Open Source · Python 3.11+</div>
+        <div class="about-hero-title">Arcnical</div>
+        <div style="font-family:var(--font-display);font-size:13px;color:var(--accent-primary);margin-bottom:14px;font-weight:600;letter-spacing:0.04em">Architecture Needs Intelligence</div>
+        <div class="about-hero-desc">Arcnical is an AI-powered GitHub repository analyzer that performs multi-layered architectural analysis — from static qualification through LLM-backed deep review. Built as a 7-day prototype sprint, it delivers actionable insights into code health, dependency graphs, security surface, and maintainability.</div>
+      </div>
+
+      <div class="about-grid">
+        <div class="about-section">
+          <div class="about-section-title">
+            <div class="about-section-icon">⚙</div>
+            Tech Stack
+          </div>
+          <div class="stack-item"><span class="stack-dot"></span>Python 3.11+ · uv package manager</div>
+          <div class="stack-item"><span class="stack-dot"></span>tree-sitter (Python + TypeScript parsers)</div>
+          <div class="stack-item"><span class="stack-dot"></span>networkx · PyVis (dependency graphs)</div>
+          <div class="stack-item"><span class="stack-dot"></span>Pydantic v2 (600+ lines schema)</div>
+          <div class="stack-item"><span class="stack-dot"></span>Streamlit · Rich · Typer (UI/CLI)</div>
+          <div class="stack-item"><span class="stack-dot"></span>Jinja2 (report templates)</div>
+          <div class="stack-item"><span class="stack-dot"></span>Anthropic SDK · OpenAI · Gemini (LLMs)</div>
+        </div>
+        <div class="about-section">
+          <div class="about-section-title">
+            <div class="about-section-icon">🧠</div>
+            Analysis Layers
+          </div>
+          <div class="stack-item"><span class="stack-dot" style="background:var(--accent-secondary)"></span>L1 — Qualification (static triage)</div>
+          <div class="stack-item"><span class="stack-dot" style="background:var(--accent-secondary)"></span>L2 — Heuristics (circular deps, complexity)</div>
+          <div class="stack-item"><span class="stack-dot" style="background:var(--high)"></span>L3 — Security (secrets, CVE surface)</div>
+          <div class="stack-item"><span class="stack-dot" style="background:var(--accent-primary)"></span>L4 — LLM Review (deep architectural insight)</div>
+        </div>
+        <div class="about-section">
+          <div class="about-section-title">
+            <div class="about-section-icon">👥</div>
+            Team
+          </div>
+          <div class="team-card">
+            <div class="team-avatar avatar-a">A</div>
+            <div>
+              <div class="team-name">Engineer A</div>
+              <div class="team-role">Backend · Qualification → Review Agent</div>
+            </div>
+          </div>
+          <div class="team-card">
+            <div class="team-avatar avatar-b">B</div>
+            <div>
+              <div class="team-name">Engineer B</div>
+              <div class="team-role">Surface · CLI · Streamlit · Evaluation</div>
+            </div>
+          </div>
+        </div>
+        <div class="about-section">
+          <div class="about-section-title">
+            <div class="about-section-icon">📊</div>
+            Project Stats
+          </div>
+          <div class="stack-item"><span class="stack-dot" style="background:var(--accent-amber)"></span>8 sessions · 7-day sprint</div>
+          <div class="stack-item"><span class="stack-dot" style="background:var(--accent-amber)"></span>3,000+ lines of code</div>
+          <div class="stack-item"><span class="stack-dot" style="background:var(--accent-amber)"></span>90+ tests · 74.8% coverage</div>
+          <div class="stack-item"><span class="stack-dot" style="background:var(--accent-amber)"></span>28 Python modules · 4 YAML configs</div>
+          <div class="stack-item"><span class="stack-dot" style="background:var(--accent-amber)"></span>73 requirements mapped (RTM)</div>
+          <div class="stack-item"><span class="stack-dot" style="background:var(--accent-amber)"></span>Delivery: 15 April 2026 · On Track</div>
+        </div>
+      </div>
+
+      <div class="about-section" style="margin-bottom:0">
+        <div class="about-section-title">
+          <div class="about-section-icon">🚀</div>
+          Sprint Timeline
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:4px">
+          <div style="background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);padding:10px;border-top:2px solid var(--accent-secondary)">
+            <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:4px;font-family:var(--font-display);font-weight:700">Sessions 1–2</div>
+            <div style="font-size:11px;color:var(--text-secondary);line-height:1.5">Requirements extraction · Project structure · Pydantic schema</div>
+          </div>
+          <div style="background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);padding:10px;border-top:2px solid var(--accent-secondary)">
+            <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:4px;font-family:var(--font-display);font-weight:700">Sessions 3–4</div>
+            <div style="font-size:11px;color:var(--text-secondary);line-height:1.5">Parsers · Knowledge graph · L2/L3 heuristics · 70/70 tests</div>
+          </div>
+          <div style="background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);padding:10px;border-top:2px solid var(--accent-primary)">
+            <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:4px;font-family:var(--font-display);font-weight:700">Sessions 5–7</div>
+            <div style="font-size:11px;color:var(--text-secondary);line-height:1.5">Report generation · Multi-LLM architecture · CLI provider flags</div>
+          </div>
+          <div style="background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);padding:10px;border-top:2px solid var(--accent-amber)">
+            <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:4px;font-family:var(--font-display);font-weight:700">Session 8</div>
+            <div style="font-size:11px;color:var(--text-secondary);line-height:1.5">Streamlit UI · PyVis graph · CLI bridge · Phase 5 pending</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-tabs">
+      <button class="footer-tab active" onclick="switchFooterTab('gui', this)">GUI</button>
+      <button class="footer-tab" onclick="switchFooterTab('cli', this)">Command Line</button>
+      <div class="footer-tabs-controls">
+        <div class="provider-rel">
+          <div class="provider-btn-wrap">
+            <button class="provider-main" onclick="toggleProviderDropdown()">
+              <span id="provider-icon">✦</span>
+              <span id="provider-label">Select LLM Provider</span>
+            </button>
+            <button class="provider-arrow" onclick="toggleProviderDropdown()">▾</button>
+          </div>
+          <div class="provider-dropdown" id="provider-dropdown">
+            <div class="provider-option selected" onclick="selectProvider('claude', '✦ Claude Sonnet 4.6', this)"><span class="provider-dot"></span>Claude (Anthropic)</div>
+            <div class="provider-option" onclick="selectProvider('openai', '⬡ GPT-4o', this)"><span class="provider-dot"></span>GPT-4o (OpenAI)</div>
+            <div class="provider-option" onclick="selectProvider('gemini', '◈ Gemini 2.0', this)"><span class="provider-dot"></span>Gemini 2.0 (Google)</div>
+          </div>
+        </div>
+        <div class="depth-group">
+          <span class="depth-label">Analysis Depth</span>
+          <label class="radio-option">
+            <input type="radio" name="depth" value="quick"> Quick
+          </label>
+          <label class="radio-option checked">
+            <input type="radio" name="depth" value="standard" checked> Standard
+            <span class="depth-hint">Full L1–L4 (with LLM)</span>
+          </label>
+        </div>
+      </div>
+    </div>
+    <div id="footer-gui" class="footer-input-row">
+      <input class="repo-input" type="text" id="repo-url" placeholder="github.com/username/repo  or  /local/path/to/project">
+      <button class="btn-analyze" onclick="handleAnalyze()">⬡ Analyze Repository</button>
+    </div>
+    <div id="footer-cli" class="footer-input-row" style="display:none">
+      <input class="repo-input" type="text" style="font-family:var(--font-mono);font-size:11px" placeholder="arcnical analyze github.com/username/repo --depth standard --llm-provider claude">
+      <button class="btn-analyze" onclick="handleAnalyze()">▶ Run</button>
+    </div>
+  </footer>
+
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">✓ <span id="toast-msg">Action completed</span></div>
+
+<script>
+// ── SIDEBAR EVENTS DATA ──
+const events = [
+  { title: 'Level One Completed', sub: 'L1 Qualification', type: 'completed', badge: 'OK', badgeClass: 'badge-ok', time: '16:41:02' },
+  { title: 'Level Two Completed', sub: 'L2 Heuristics', type: 'completed', badge: 'OK', badgeClass: 'badge-ok', time: '16:41:18' },
+  { title: 'Level Three Completed', sub: 'L3 Security', type: 'warning', badge: 'WARN', badgeClass: 'badge-warn', time: '16:41:35' },
+  { title: 'Level Four Completed', sub: 'L4 LLM Review', type: 'completed', badge: 'OK', badgeClass: 'badge-ok', time: '16:41:58' },
+  { title: 'atAlertContentWarning', sub: 'orchestrator.py:48', type: 'warning', badge: 'WARN', badgeClass: 'badge-warn', time: '16:41:22' },
+  { title: 'CircularImportDetected', sub: 'schemas → parsers → schemas', type: 'error', badge: 'ERR', badgeClass: 'badge-err', time: '16:41:19' },
+  { title: 'GodClassDetected', sub: 'orchestrator.py (480 LOC)', type: 'error', badge: 'ERR', badgeClass: 'badge-err', time: '16:41:20' },
+  { title: 'atAlertContentWarning', sub: 'heuristics/detectors.py:114', type: 'warning', badge: 'WARN', badgeClass: 'badge-warn', time: '16:41:29' },
+  { title: 'HighComplexityFound', sub: 'orchestrator.py (CC: 18.4)', type: 'warning', badge: 'WARN', badgeClass: 'badge-warn', time: '16:41:31' },
+  { title: 'SecurityScanComplete', sub: 'No secrets exposed', type: 'completed', badge: 'OK', badgeClass: 'badge-ok', time: '16:41:36' },
+  { title: 'LLMReviewQueued', sub: 'claude-sonnet-4-6', type: 'completed', badge: 'OK', badgeClass: 'badge-ok', time: '16:41:40' },
+  { title: 'atAlertContentWarning', sub: 'graph_builder.py:88', type: 'warning', badge: 'WARN', badgeClass: 'badge-warn', time: '16:41:42' },
+];
+
+function renderSidebarEvents(filter = '') {
+  const container = document.getElementById('sidebar-events');
+  container.innerHTML = '';
+  const filtered = filter ? events.filter(e => e.title.toLowerCase().includes(filter.toLowerCase()) || e.sub.toLowerCase().includes(filter.toLowerCase())) : events;
+  filtered.forEach(e => {
+    container.innerHTML += `
+      <div class="event-card ${e.type}">
+        <div class="event-title">${e.title}</div>
+        <div class="event-sub">${e.sub}</div>
+        <span class="event-badge ${e.badgeClass}">● ${e.badge}</span>
+        <span style="float:right;font-size:9.5px;color:var(--text-muted);font-family:var(--font-mono);margin-top:-14px">${e.time}</span>
+      </div>`;
+  });
+}
+
+function filterEvents(val) { renderSidebarEvents(val); }
+
+// ── FINDINGS DATA ──
+const findings = [
+  { id: 'F-001', title: 'Circular Import Chain Detected', severity: 'Critical', layer: 'L2 — Heuristics', file: 'schemas/models.py', line: 12, verified: true, rationale: 'A circular import between schemas/models.py, parsers/python_parser.py, and back creates a module loading deadlock risk. Refactor to use forward declarations or dependency injection.', color: 'var(--critical)' },
+  { id: 'F-002', title: 'God Class: Orchestrator exceeds 400 LOC', severity: 'High', layer: 'L2 — Heuristics', file: 'orchestrator.py', line: 1, verified: true, rationale: 'The Orchestrator class handles qualification, parsing, heuristics, LLM dispatch, and reporting — violating Single Responsibility. Extract into focused sub-orchestrators per analysis phase.', color: 'var(--high)' },
+  { id: 'F-003', title: 'Circular Import: report ↔ heuristics', severity: 'Critical', layer: 'L2 — Heuristics', file: 'report/formatters.py', line: 8, verified: true, rationale: 'Cross-module circular dependency between the report formatter and heuristics detectors. Introduce an intermediate data transfer object (DTO) layer to break the cycle.', color: 'var(--critical)' },
+  { id: 'F-004', title: 'High Cyclomatic Complexity in orchestrator.py', severity: 'Medium', layer: 'L2 — Heuristics', file: 'orchestrator.py', line: 48, verified: false, rationale: 'Function run_analysis() has a cyclomatic complexity of 18.4 — well above the recommended threshold of 10. Decompose into smaller, testable units.', color: 'var(--medium)' },
+  { id: 'F-005', title: 'Unstable Module: graph_builder.py', severity: 'Medium', layer: 'L2 — Heuristics', file: 'graph_builder.py', line: 1, verified: false, rationale: 'Module instability index of 0.82 (dependents: 2, dependencies: 11). High fan-out indicates this module is brittle to upstream changes.', color: 'var(--medium)' },
+  { id: 'F-006', title: 'Large File: parsers/python_parser.py', severity: 'Medium', layer: 'L2 — Heuristics', file: 'parsers/python_parser.py', line: 1, verified: false, rationale: 'File exceeds 250 LOC threshold at 295 lines. Consider splitting visitor methods into a dedicated visitor module.', color: 'var(--medium)' },
+  { id: 'F-007', title: 'Secrets Scanning: Low Coverage', severity: 'Critical', layer: 'L3 — Security', file: 'configs/layer3.yaml', line: 4, verified: true, rationale: 'Security layer configuration only covers 3 of 8 recommended secret patterns. Expand gitleaks ruleset to include GitHub tokens, AWS keys, and JWT secrets.', color: 'var(--critical)' },
+  { id: 'F-008', title: 'Missing Type Annotations in LLM Provider', severity: 'Medium', layer: 'L2 — Heuristics', file: 'llm/claude_provider.py', line: 32, verified: false, rationale: 'Several public methods lack return type annotations. Add full PEP 484 annotations to enable static analysis and improve IDE support.', color: 'var(--medium)' },
+];
+
+function renderFindings() {
+  const container = document.getElementById('findings-accordion');
+  container.innerHTML = '';
+  findings.forEach((f, i) => {
+    const severityClass = f.severity.toLowerCase();
+    container.innerHTML += `
+      <div class="acc-item" id="acc-${i}">
+        <div class="acc-header" onclick="toggleAccordion(${i})">
+          <div class="acc-severity-dot" style="background:${f.color}"></div>
+          <div class="acc-title">${f.title}</div>
+          <div class="acc-meta">
+            <span class="badge-pill pill-${severityClass}">${f.severity}</span>
+            <span>${f.file}</span>
+          </div>
+          <div class="acc-chevron">▼</div>
+        </div>
+        <div class="acc-body">
+          <div class="acc-details-grid">
+            <div class="acc-detail-group"><div class="acc-detail-key">Finding ID</div><div class="acc-detail-val">${f.id}</div></div>
+            <div class="acc-detail-group"><div class="acc-detail-key">Layer</div><div class="acc-detail-val">${f.layer}</div></div>
+            <div class="acc-detail-group"><div class="acc-detail-key">Severity</div><div class="acc-detail-val" style="color:${f.color}">${f.severity}</div></div>
+            <div class="acc-detail-group"><div class="acc-detail-key">Verified</div><div class="acc-detail-val" style="color:${f.verified ? 'var(--accent-secondary)' : 'var(--text-muted)'}">${f.verified ? 'True ✓' : 'False'}</div></div>
+            <div class="acc-detail-group"><div class="acc-detail-key">File</div><div class="acc-detail-val">${f.file}</div></div>
+            <div class="acc-detail-group"><div class="acc-detail-key">Line</div><div class="acc-detail-val">${f.line}</div></div>
+          </div>
+          <div class="acc-rationale">${f.rationale}</div>
+        </div>
+      </div>`;
+  });
+}
+
+function toggleAccordion(idx) {
+  const item = document.getElementById(`acc-${idx}`);
+  item.classList.toggle('open');
+}
+
+// ── GRAPH ──
+const graphNodes = [
+  { id: 'orchestrator', x: 50, y: 50, r: 18, color: '#f54b6a', label: 'orchestrator', type: 'critical' },
+  { id: 'graph_builder', x: 75, y: 30, r: 14, color: '#f5a623', label: 'graph_builder', type: 'high' },
+  { id: 'schemas', x: 25, y: 30, r: 13, color: '#7c5cfc', label: 'schemas', type: 'core' },
+  { id: 'parsers_py', x: 20, y: 60, r: 12, color: '#7c5cfc', label: 'py_parser', type: 'core' },
+  { id: 'parsers_ts', x: 35, y: 75, r: 11, color: '#7c5cfc', label: 'ts_parser', type: 'core' },
+  { id: 'heuristics', x: 65, y: 70, r: 12, color: '#00d4aa', label: 'heuristics', type: 'util' },
+  { id: 'report', x: 80, y: 60, r: 11, color: '#00d4aa', label: 'report', type: 'util' },
+  { id: 'llm_base', x: 85, y: 45, r: 10, color: '#00d4aa', label: 'llm_base', type: 'util' },
+  { id: 'claude_prov', x: 90, y: 30, r: 8, color: '#6b7280', label: 'claude', type: 'low' },
+  { id: 'openai_prov', x: 95, y: 45, r: 7, color: '#6b7280', label: 'openai', type: 'low' },
+  { id: 'gemini_prov', x: 90, y: 58, r: 7, color: '#6b7280', label: 'gemini', type: 'low' },
+  { id: 'cli', x: 50, y: 82, r: 10, color: '#00d4aa', label: 'cli', type: 'util' },
+  { id: 'ui_dash', x: 15, y: 80, r: 9, color: '#6b7280', label: 'dashboard', type: 'low' },
+  { id: 'metrics', x: 60, y: 20, r: 9, color: '#7c5cfc', label: 'metrics', type: 'core' },
+];
+
+const graphEdges = [
+  ['orchestrator','schemas'], ['orchestrator','graph_builder'], ['orchestrator','heuristics'],
+  ['orchestrator','report'], ['orchestrator','llm_base'], ['orchestrator','cli'],
+  ['schemas','parsers_py'], ['parsers_py','schemas'],
+  ['schemas','parsers_ts'], ['graph_builder','schemas'],
+  ['heuristics','schemas'], ['report','heuristics'],
+  ['llm_base','claude_prov'], ['llm_base','openai_prov'], ['llm_base','gemini_prov'],
+  ['cli','orchestrator'], ['ui_dash','orchestrator'], ['metrics','schemas'],
+  ['graph_builder','metrics'], ['heuristics','metrics'],
+];
+
+function drawGraph() {
+  const canvas = document.getElementById('graph-canvas');
+  const w = canvas.offsetWidth, h = canvas.offsetHeight;
+  const svg = document.getElementById('graph-svg');
+
+  const toX = (pct) => pct / 100 * w;
+  const toY = (pct) => pct / 100 * h;
+
+  let html = '<defs>';
+  graphNodes.forEach(n => {
+    html += `<radialGradient id="g-${n.id}" cx="40%" cy="35%"><stop offset="0%" stop-color="${n.color}" stop-opacity="0.8"/><stop offset="100%" stop-color="${n.color}" stop-opacity="0.3"/></radialGradient>`;
+  });
+  html += '</defs>';
+
+  // edges
+  graphEdges.forEach(([a, b]) => {
+    const na = graphNodes.find(n => n.id === a);
+    const nb = graphNodes.find(n => n.id === b);
+    if (!na || !nb) return;
+    const isCircular = graphEdges.some(([x, y]) => x === b && y === a);
+    html += `<line x1="${toX(na.x)}" y1="${toY(na.y)}" x2="${toX(nb.x)}" y2="${toY(nb.y)}" stroke="${isCircular ? '#f54b6a' : '#1e2535'}" stroke-width="${isCircular ? '1.5' : '1'}" stroke-opacity="${isCircular ? '0.7' : '0.5'}" ${isCircular ? 'stroke-dasharray="4 3"' : ''}/>`;
+  });
+
+  // nodes
+  graphNodes.forEach(n => {
+    html += `
+      <g class="graph-node" data-id="${n.id}" data-label="${n.label}" style="cursor:pointer">
+        <circle cx="${toX(n.x)}" cy="${toY(n.y)}" r="${n.r + 4}" fill="${n.color}" fill-opacity="0.08"/>
+        <circle cx="${toX(n.x)}" cy="${toY(n.y)}" r="${n.r}" fill="url(#g-${n.id})" stroke="${n.color}" stroke-width="1.5"/>
+        <text x="${toX(n.x)}" y="${toY(n.y) + n.r + 12}" text-anchor="middle" fill="#8892a4" font-size="9" font-family="DM Mono, monospace">${n.label}</text>
+      </g>`;
+  });
+
+  svg.innerHTML = html;
+
+  // tooltip
+  svg.querySelectorAll('.graph-node').forEach(el => {
+    el.addEventListener('mouseenter', (e) => {
+      const tip = document.getElementById('graph-tooltip');
+      const nodeId = el.dataset.id;
+      const node = graphNodes.find(n => n.id === nodeId);
+      const inDeps = graphEdges.filter(([, b]) => b === nodeId).length;
+      const outDeps = graphEdges.filter(([a]) => a === nodeId).length;
+      tip.innerHTML = `<strong>${node.label}</strong><br>Type: ${node.type} | LOC: ~${Math.round(node.r * 18)}<br>In: ${inDeps}  Out: ${outDeps}`;
+      tip.style.display = 'block';
+    });
+    el.addEventListener('mousemove', (e) => {
+      const rect = document.getElementById('graph-canvas').getBoundingClientRect();
+      const tip = document.getElementById('graph-tooltip');
+      tip.style.left = (e.clientX - rect.left + 12) + 'px';
+      tip.style.top = (e.clientY - rect.top - 10) + 'px';
+    });
+    el.addEventListener('mouseleave', () => {
+      document.getElementById('graph-tooltip').style.display = 'none';
+    });
+  });
+}
+
+// ── NAV ──
+function switchPage(page, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(`page-${page}`).classList.add('active');
+  btn.classList.add('active');
+  if (page === 'graph') setTimeout(drawGraph, 50);
+}
+
+// ── FOOTER ──
+function switchFooterTab(tab, btn) {
+  document.querySelectorAll('.footer-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('footer-gui').style.display = tab === 'gui' ? 'flex' : 'none';
+  document.getElementById('footer-cli').style.display = tab === 'cli' ? 'flex' : 'none';
+}
+
+// ── PROVIDER DROPDOWN ──
+function toggleProviderDropdown() {
+  document.getElementById('provider-dropdown').classList.toggle('open');
+}
+
+function selectProvider(id, label, el) {
+  document.getElementById('provider-label').textContent = label;
+  document.querySelectorAll('.provider-option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('provider-dropdown').classList.remove('open');
+  showToast(`Provider set to ${label}`);
+}
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.provider-rel')) {
+    document.getElementById('provider-dropdown').classList.remove('open');
+  }
+});
+
+// ── ANALYZE ──
+function handleAnalyze() {
+  const url = document.getElementById('repo-url')?.value?.trim();
+  if (!url) { showToast('⚠ Please enter a repository URL or path'); return; }
+  showToast('⬡ Analysis started — processing repository…');
+}
+
+// ── EXPORT ──
+function handleExport() { showToast('⬇ Exporting report as JSON…'); }
+function toggleExportMenu() { showToast('Choose format: JSON · Markdown · PDF'); }
+
+// ── TOAST ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-msg').textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ── FILE TREE ──
+function toggleDir(el) {
+  const children = el.nextElementSibling;
+  if (!children) return;
+  const isOpen = children.style.display !== 'none';
+  children.style.display = isOpen ? 'none' : 'block';
+  el.querySelector('.fi-icon').textContent = isOpen ? '▶' : '▼';
+}
+
+function expandAllFiles() {
+  document.querySelectorAll('.file-children, .file-children-inner, .file-children-inner2, .file-children-inner3, .file-children-inner4, .file-children-inner5, .file-children-inner6, .file-children-t, .file-children-c').forEach(el => el.style.display = 'block');
+  document.querySelectorAll('.file-item.dir .fi-icon').forEach(ic => ic.textContent = '▼');
+}
+
+// ── GRAPH FILTER ──
+function setGraphFilter(type, btn) {
+  document.querySelectorAll('.graph-controls .chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ── INIT ──
+renderSidebarEvents();
+renderFindings();
+</script>
+</body>
+</html>
