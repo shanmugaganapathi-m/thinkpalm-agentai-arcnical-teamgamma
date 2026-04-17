@@ -21,7 +21,7 @@ Prove that a tool combining **deterministic static analysis** with a **retrieval
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/arcnical/arcnical.git
+git clone https://github.com/shanmugaganapathi-m/thinkpalm-agentai-arcnical-teamgamma.git
 cd arcnical
 
 # 2. Install uv if not already installed
