@@ -10,6 +10,9 @@ Prove that a tool combining **deterministic static analysis** with a **retrieval
 
 ## Quick Start
 
+### Youtube Demo link
+https://youtu.be/aQIDmAAN62Q
+
 ### Prerequisites
 
 - Python 3.11 or 3.12 (Python 3.13 is supported but may show deprecation warnings from dependencies)
