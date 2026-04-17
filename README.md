@@ -18,8 +18,11 @@ https://youtu.be/aQIDmAAN62Q
 In the Docs/ADR folder the below files available:
 
 ARCNICAL_ARCHITECTURE_DECISION_DOCUMENT.pdf
+
 arcnical_architecture.html
+
 arcnical_architecture.svg
+
 arcnical_prototype.html
 
 ### Prerequisites
